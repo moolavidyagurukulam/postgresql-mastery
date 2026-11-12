@@ -197,3 +197,22 @@ SELECT app_name, jsonb_pretty(config) FROM configs;
 -- =============================================
 -- Next Class: Data Types — Special Types & Casting
 -- =============================================
+
+-- === ANSWER KEY ===
+-- 1. Create skills table with TEXT[] and query 'PostgreSQL'
+CREATE TABLE skills (id SERIAL, name TEXT, skills TEXT[]);
+SELECT * FROM skills WHERE 'PostgreSQL' = ANY(skills);
+
+-- 2. List all unique skills across rows
+SELECT DISTINCT unnest(skills) AS skill FROM skills ORDER BY skill;
+
+-- 3. Create configs table with JSONB and query nested key
+CREATE TABLE configs (id SERIAL, app_name TEXT, config JSONB);
+SELECT app_name, config->'db'->>'host' AS db_host FROM configs;
+
+-- 4. Add GIN index and use @> containment operator
+CREATE INDEX idx_configs_gin ON configs USING GIN (config);
+SELECT * FROM configs WHERE config @> '{"env":"prod"}';
+
+-- 5. Update nested value with jsonb_set & merge key with ||
+UPDATE configs SET config = jsonb_set(config, '{db,port}', '5433') || '{"debug":false}'::jsonb WHERE id = 1;
