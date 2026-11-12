@@ -69,6 +69,28 @@
 -- They need: restaurants, menus, orders, delivery addresses, payments.
 -- Would you recommend PostgreSQL? Why or why not?
 
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- Visit https://www.postgresql.org/download/ ? PostgreSQL 16 is our course
+-- baseline, alongside the newest stable release listed on the download page.
+
+-- Answer 2:
+-- Instagram (user posts, comments & likes), Spotify (music catalog & playlists),
+-- and Netflix (internal studio tools & analytics).
+
+-- Answer 3:
+-- Open source means the source code is publicly visible and free to use,
+-- audit, and improve ? zero license fees, no vendor lock-in, faster security audits.
+
+-- Answer 4:
+-- Over 38+ years of continuous development since 1986.
+-- Other long-lived software: Oracle (1979), GCC (1987), Linux (1991), Python (1991).
+
+-- Answer 5:
+-- YES ? PostgreSQL is ideal. Relational tables link restaurants, menus,
+-- orders, and delivery addresses cleanly, while ACID transactions protect payments.
+
 -- =============================================
 -- Next Class: PostgreSQL vs Other Databases
 -- =============================================

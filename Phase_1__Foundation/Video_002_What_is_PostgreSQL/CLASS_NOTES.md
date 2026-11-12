@@ -106,9 +106,11 @@ PostgreSQL releases a new major version every year, usually in September or Octo
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **Each version** | new features and improvements |
-| **The current version** | PostgreSQL 16, which is what we will use in this entire course |
-| **And upgrading between versions** | straightforward |
+| **Yearly Release** | New major PostgreSQL release every autumn (Sept/Oct) |
+| **PG 12 – 13** | Generated columns, incremental sort, improved VACUUM |
+| **PG 14 – 15** | Multirange types, SQL-standard MERGE, stricter public schema |
+| **PostgreSQL 16** | Current course version: logical standby repl, parallel full vacuum |
+| **Upgrades** | Smooth major version upgrades with pg_upgrade |
 
 ### Why Open Source Matters for Databases
 Let me explain why open source matters so much for a database. ... With a commercial database like Oracle, you pay licensing fees. These can be lakhs or even crores of rupees per year. If the company changes their pricing, you are stuck. If they stop supporting your version, you must upgrade on their timeline. You cannot see the source code, so you cannot fix bugs yourself. ... With PostgreSQL, there are no licensing fees ... ever. You can run it on one server or a thousand servers, and it costs the same ... zero. You can see the source code. If there is a bug, you or the community can fix it. No vendor can hold your data hostage. ... This is why PostgreSQL is called the world's most advanced open source database. It is not just free as in cost ... it is free as in freedom.
@@ -202,3 +204,11 @@ psql -U postgres -d postgres -f materials.sql
 # Or from inside psql prompt:
 postgres=# \i materials.sql
 ```
+
+
+## Answer Key ? Practice Exercises
+1. **Latest Stable Version:** Visit `postgresql.org` ? PostgreSQL 16 is our course baseline, alongside the latest stable release listed on the download page.
+2. **3 Companies & Their Data:** **Instagram** (user posts, comments & likes), **Spotify** (music catalog & playlists), and **Netflix** (internal studio tools & analytics).
+3. **Why Open Source Matters:** Source code is publicly visible and free ? zero licensing fees, no vendor lock-in, and faster community security audits.
+4. **35+ Years Since 1986 & Peer Software:** Over 38+ years of evolution since 1986; other long-lived software includes **Oracle** (1979), **GCC** (1987), **Linux** (1991), and **Python** (1991).
+5. **Food Delivery App:** **YES** ? relational tables link restaurants, menus, orders, and delivery addresses cleanly, while ACID transactions protect every payment.

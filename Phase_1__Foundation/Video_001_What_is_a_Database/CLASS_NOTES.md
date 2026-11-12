@@ -111,13 +111,11 @@ Now, there are different types of databases. The most common types are ... Relat
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **Relational databases** | data in tables with rows and columns, and tables can be linked together |
-| **SQL Server** | all relational databases |
-| **Document databases** | data as documents, usually in JSON format |
-| **MongoDB** | the most popular one |
-| **Key-Value databases** | data as simple pairs |
-| **Redis** | a famous example |
-| **Graph databases** | data as nodes and connections |
+| **Relational** | Tables with linked rows & columns (PostgreSQL, MySQL, Oracle, SQL Server) |
+| **Document** | Flexible JSON-like documents in collections (e.g., MongoDB) |
+| **Key-Value** | Simple key-to-value lookup dictionary (e.g., Redis) |
+| **Graph** | Connected nodes & edges for networks (e.g., Neo4j) |
+| **Course Focus** | PostgreSQL (Relational) — used in 80%+ of business apps |
 
 ### Relational Database — Tables with Relationships
 Let us understand relational databases a little more, since that is what we will use throughout this course. ... In a relational database, data is stored in tables. A table looks like a spreadsheet ... it has rows and columns. Each row is one record. Each column is one piece of information. ... For example, a Customers table might have columns for customer id, name, email, and phone. Each row is one customer. ... Now here is the magic. Tables can be related to each other. Your Customers table can be linked to an Orders table. And the Orders table can be linked to a Products table. ... This is why it is called a relational database ... because tables have relationships with each other. This is incredibly powerful. You can ask questions like ... show me all orders by Ravi, along with the product names and prices ... and the database figures out how to connect the dots across multiple tables.
@@ -231,3 +229,11 @@ psql -U postgres -d postgres -f materials.sql
 # Or from inside psql prompt:
 postgres=# \i materials.sql
 ```
+
+
+## Answer Key ? Practice Exercises
+1. **Daily Apps:** Swiggy / Zomato, banking apps, and Instagram all rely on databases every second.
+2. **Small Bakery (20 customers):** Use a simple spreadsheet ? do not over-engineer for 20 rows.
+3. **Hospital System:** Use a **Relational Database (PostgreSQL)** because patient records, schedules, and billing require strict rules and linked tables.
+4. **Database vs DBMS:** A **Database** is the stored data itself; a **DBMS** (like PostgreSQL) is the software that manages and protects it.
+5. **Online Shop Table Links:** `Customers` -> `Orders` via `customer_id`, and `Products` -> `Orders` via `product_id`.

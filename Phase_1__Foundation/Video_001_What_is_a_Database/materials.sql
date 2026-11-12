@@ -66,6 +66,28 @@
 -- - A Product can appear in many Orders
 -- How would you connect these tables?
 
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- Apps like Swiggy/Zomato (restaurants, menus, orders), banking apps
+-- (accounts, balances, transactions), and Instagram (users, posts, likes).
+
+-- Answer 2:
+-- 20 customers -> A simple spreadsheet is enough (do not over-engineer).
+-- 5 chains with 50,000 customers -> Use a Relational Database (PostgreSQL).
+
+-- Answer 3:
+-- Relational Database (PostgreSQL) ? patient records, doctor schedules,
+-- and billing require strict rules and linked tables.
+
+-- Answer 4:
+-- Database = the stored data itself (money in the locker).
+-- DBMS = the software managing and protecting it (the bank).
+
+-- Answer 5:
+-- Connect Customers -> Orders using customer_id, and
+-- connect Products -> Orders using product_id (or an OrderItems bridge table).
+
 -- =============================================
 -- Next Class: What is PostgreSQL?
 -- =============================================
