@@ -31,11 +31,10 @@ Here's why IDENTITY is better. SERIAL is PostgreSQL-specific. IDENTITY is SQL st
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **SERIAL** | PostgreSQL-specific |
-| **IDENTITY** | SQL standard |
-| **SERIAL always** | manual id inserts, which can cause sequence conflicts |
-| **The sequence management** | cleaner — no orphaned sequences |
-| **SERIAL still** | and you'll see it in existing code, but for new tables in PostgreSQL 16, use IDENTITY |
+| **SQL Standard** | IDENTITY follows ANSI SQL standard; SERIAL is PostgreSQL-specific |
+| **Override Guard** | GENERATED ALWAYS blocks accidental manual ID inserts |
+| **Cleaner Lifecycle** | No loose hidden sequence permissions or pg_dump quirks |
+| **PG 16 Rule** | Use GENERATED ALWAYS AS IDENTITY for every new table |
 
 ### Sequence Gaps Are Normal (Not a Bug!)
 Important lesson — sequence gaps are normal, not a bug. If a transaction calls nextval but then rolls back, that number is gone. The sequence never goes backward. You might see ids one, two, three, five, eight. That's fine. Sequences guarantee unique values, not contiguous values. Don't try to make them gapless — it requires table locks and destroys performance. If you need gapless numbers like invoice numbers, use a separate counter table with explicit row locks.
@@ -65,13 +64,14 @@ When should you use temp tables? For complex queries — break them into steps a
 - They shadow real tables with the same name — be careful!
 
 ### Regular vs Temporary vs Unlogged Tables
-Here's the comparison. Regular tables are visible to everyone, WAL-logged, and survive crashes — your default for permanent data. Temporary tables are session-only and auto-dropped — perfect for scratch work. Unlogged tables are visible to everyone and fast, but data is lost on crash — good for regenerable caches only. Choose based on durability needs.
+Before we wrap up Phase 4 DDL, make sure you know when to choose Regular, Temporary, or Unlogged tables. ... Regular tables are WAL-logged and shared by every session—your 99 percent default for real user and order data that must survive a server crash. ... Temporary tables live privately inside one session and vanish cleanly at disconnect—perfect for multi-step reports or ETL staging. ... Unlogged tables give two to three times faster writes by skipping WAL, ONLY use them for disposable caches you can rebuild anytime!
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **Regular tables** | visible to everyone, WAL-logged, and survive crashes — your default for permanent data |
-| **Temporary tables** | session-only and auto-dropped — perfect for scratch work |
-| **Unlogged tables** | visible to everyone and fast, but data is lost on crash — good for regenerable caches only |
+| **Regular Table** | Shared, WAL-logged & crash-safe — default for all real business data |
+| **TEMP Table** | Private to one session, auto-dropped on exit — great for ETL staging |
+| **UNLOGGED** | Shared & 2–3× faster writes, WIPED EMPTY on crash — caches only! |
+| **How to Pick** | Real data → Regular | Scratch SQL → TEMP | Disposable cache → UNLOGGED |
 
 
 ---
@@ -294,6 +294,38 @@ Practice time. Create a table with IDENTITY and verify auto-generated ids. Try m
 6. Create an UNLOGGED TABLE, insert data, verify it works like a normal table
 7. Compare: regular table vs temp table vs unlogged table behavior
 
+
+---
+
+
+### Answer Key — Sequences, IDENTITY & Temporary Tables Solutions
+
+```sql
+-- 1. Create independent sequence and fetch values
+-- Note: currval returns session value; nextval advances counter.
+CREATE SEQUENCE order_seq START WITH 1001 INCREMENT BY 1;
+SELECT nextval('order_seq'), currval('order_seq');
+
+-- 2. GENERATED ALWAYS AS IDENTITY table
+-- Note: GENERATED ALWAYS is modern SQL standard over SERIAL.
+CREATE TABLE invoices (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, amount NUMERIC(10,2));
+INSERT INTO invoices (amount) VALUES (150.00) RETURNING id;
+
+-- 3. Resync sequence after manual bulk insert
+-- Note: Always resync sequences after data import with fixed IDs.
+SELECT setval(pg_get_serial_sequence('invoices', 'id'), (SELECT MAX(id) FROM invoices));
+
+-- 4. Session TEMPORARY table
+-- Note: Temp table auto-drops cleanly when session disconnects.
+CREATE TEMP TABLE session_cache (k TEXT PRIMARY KEY, v JSONB);
+INSERT INTO session_cache VALUES ('user_prefs', '{"theme":"dark"}');
+SELECT * FROM session_cache;
+
+-- 5. High-speed UNLOGGED table
+-- Note: Skips WAL for ultra-fast writes; data truncated on crash.
+CREATE UNLOGGED TABLE staging_logs (id SERIAL PRIMARY KEY, payload TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
+
+```
 
 ---
 

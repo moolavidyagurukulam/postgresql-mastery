@@ -268,6 +268,35 @@ SELECT setval(
   (SELECT MAX(id) FROM orders_serial)
 );
 
+
+-- =============================================
+-- ANSWER KEY — SEQUENCES, IDENTITY & TEMPORARY TABLES SOLUTIONS
+-- =============================================
+-- 1. Create independent sequence and fetch values
+-- Note: currval returns session value; nextval advances counter.
+CREATE SEQUENCE order_seq START WITH 1001 INCREMENT BY 1;
+SELECT nextval('order_seq'), currval('order_seq');
+
+-- 2. GENERATED ALWAYS AS IDENTITY table
+-- Note: GENERATED ALWAYS is modern SQL standard over SERIAL.
+CREATE TABLE invoices (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, amount NUMERIC(10,2));
+INSERT INTO invoices (amount) VALUES (150.00) RETURNING id;
+
+-- 3. Resync sequence after manual bulk insert
+-- Note: Always resync sequences after data import with fixed IDs.
+SELECT setval(pg_get_serial_sequence('invoices', 'id'), (SELECT MAX(id) FROM invoices));
+
+-- 4. Session TEMPORARY table
+-- Note: Temp table auto-drops cleanly when session disconnects.
+CREATE TEMP TABLE session_cache (k TEXT PRIMARY KEY, v JSONB);
+INSERT INTO session_cache VALUES ('user_prefs', '{"theme":"dark"}');
+SELECT * FROM session_cache;
+
+-- 5. High-speed UNLOGGED table
+-- Note: Skips WAL for ultra-fast writes; data truncated on crash.
+CREATE UNLOGGED TABLE staging_logs (id SERIAL PRIMARY KEY, payload TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
+
+
 -- === CLEANUP ===
 -- DROP TABLE IF EXISTS employees, tickets, fast_log, session_cache;
 -- DROP TABLE IF EXISTS invoices, products, users, orders_serial;
