@@ -254,6 +254,42 @@ BEGIN;
 ROLLBACK;
 SELECT * FROM students;  -- Still exists!
 
+
+-- =============================================
+-- ANSWER KEY — CREATE, ALTER & DROP TABLE SOLUTIONS
+-- =============================================
+-- =============================================
+-- 6. HANDS-ON PRACTICE & VERIFIED SOLUTIONS
+-- =============================================
+
+-- 1. CREATE TABLE with constraints and inspect with \d
+CREATE TABLE books (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title TEXT NOT NULL,
+    price NUMERIC(8,2)
+);
+\d books
+
+-- 2. ALTER TABLE ADD, RENAME, and ALTER TYPE USING
+ALTER TABLE books ADD COLUMN isbn TEXT;
+ALTER TABLE books RENAME COLUMN title TO book_title;
+ALTER TABLE books ALTER COLUMN price TYPE INT USING price::int;
+
+-- 3. TRUNCATE TABLE with RESTART IDENTITY
+TRUNCATE TABLE books RESTART IDENTITY;
+INSERT INTO books (book_title, price) VALUES ('SQL Guide', 25) RETURNING id;
+
+-- 4. Transactional DROP safety with ROLLBACK
+BEGIN;
+DROP TABLE books;
+SELECT to_regclass('books'); -- Returns NULL (table dropped in txn)
+ROLLBACK;
+SELECT to_regclass('books'); -- Returns 'books' (table fully restored!)
+
+-- 5. Safe idempotent DROP with IF EXISTS
+DROP TABLE IF EXISTS books, books_archive;
+
+
 -- === CLEANUP ===
 -- DROP TABLE IF EXISTS students, demo_truncate;
 -- DROP TABLE IF EXISTS managers, employees_backup, employees;

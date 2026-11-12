@@ -350,52 +350,45 @@ ERROR:  column "id" is still referenced from table "orders"
 
 ## 6. Hands-On Practice Exercises (Try It Yourself!)
 
-Practice time. First, create a students table with a serial primary key, name not null, unique email, a gpa with a check constraint between zero and four, and an enrolled date defaulting to today. Insert three students and inspect the table. Then alter it — add a phone column, rename gpa, and modify nullability. Create a backup with LIKE. Truncate to clear data, then drop the backup. That's the full DDL lifecycle.
+Before moving to constraints in Class 20, run these five hands-on DDL exercises inside psql to master table creation, alteration, truncation, and transactional drops:
 
-1. CREATE TABLE students with: id (SERIAL PK), name (NOT NULL), email (UNIQUE NOT NULL), gpa (NUMERIC CHECK 0-4), enrolled_date (DEFAULT today)
-2. INSERT 3 students, then verify with SELECT and \d
-3. ALTER TABLE: ADD phone column, RENAME gpa to grade_point, SET email DROP NOT NULL
-4. CREATE TABLE students_backup (LIKE students INCLUDING ALL)
-5. TRUNCATE students RESTART IDENTITY, verify id resets
-6. DROP TABLE students_backup, then try DROP without IF EXISTS on a nonexistent table
-7. Create, modify, truncate, drop — the full DDL lifecycle
-
+1. **Exercise 1 (CREATE & Inspect):** CREATE TABLE books with GENERATED ALWAYS AS IDENTITY primary key, title, and price, then inspect with `\d books`.
+2. **Exercise 2 (ALTER Schema):** Add an isbn column, rename title to book_title, and convert price type using `ALTER COLUMN price TYPE INT USING price::int`.
+3. **Exercise 3 (TRUNCATE & Reset):** Practice `TRUNCATE TABLE books RESTART IDENTITY` and verify the next inserted row receives id 1.
+4. **Exercise 4 (Transactional DDL):** Wrap `DROP TABLE books` inside `BEGIN ... ROLLBACK` to prove PostgreSQL safely rolls back dropped tables!
+5. **Exercise 5 (Idempotent Cleanup):** Execute `DROP TABLE IF EXISTS books, books_archive` for clean, reusable scripts.
 
 ---
-
 
 ### Answer Key — CREATE, ALTER & DROP TABLE Solutions
 
 ```sql
 -- 1. CREATE TABLE with constraints and inspect with \d
--- Note: \d displays column types, modifiers, and bound sequences.
-CREATE TABLE students (id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(100) UNIQUE, grade_point NUMERIC(3,2));
-\d students
+CREATE TABLE books (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title TEXT NOT NULL,
+    price NUMERIC(8,2)
+);
+\d books
 
--- 2. ALTER TABLE ADD, RENAME, and ALTER TYPE
--- Note: USING allows explicit casting during column type alteration.
-ALTER TABLE students ADD COLUMN phone VARCHAR(20);
-ALTER TABLE students RENAME COLUMN grade_point TO gpa;
-ALTER TABLE students ALTER COLUMN gpa TYPE NUMERIC(4,2) USING gpa::numeric(4,2);
+-- 2. ALTER TABLE ADD, RENAME, and ALTER TYPE USING
+ALTER TABLE books ADD COLUMN isbn TEXT;
+ALTER TABLE books RENAME COLUMN title TO book_title;
+ALTER TABLE books ALTER COLUMN price TYPE INT USING price::int;
 
--- 3. Duplicate table structure with LIKE
--- Note: INCLUDING ALL copies defaults, constraints, and indexes.
-CREATE TABLE students_backup (LIKE students INCLUDING ALL);
+-- 3. TRUNCATE TABLE with RESTART IDENTITY
+TRUNCATE TABLE books RESTART IDENTITY;
+INSERT INTO books (book_title, price) VALUES ('SQL Guide', 25) RETURNING id;
 
--- 4. TRUNCATE and reset identity sequence
--- Note: RESTART IDENTITY forces the counter back to 1.
-TRUNCATE TABLE students RESTART IDENTITY;
-INSERT INTO students (name, email, gpa) VALUES ('Ravi', 'ravi@uni.com', 3.85);
-SELECT id, name FROM students;
-
--- 5. Transactional DROP safety with ROLLBACK
--- Note: PostgreSQL DDL runs inside transactions safely.
+-- 4. Transactional DROP safety with ROLLBACK
 BEGIN;
-DROP TABLE students;
-SELECT to_regclass('students'); -- returns NULL
+DROP TABLE books;
+SELECT to_regclass('books'); -- Returns NULL (table dropped in txn)
 ROLLBACK;
-SELECT to_regclass('students'); -- returns 'students'
+SELECT to_regclass('books'); -- Returns 'books' (table fully restored!)
 
+-- 5. Safe idempotent DROP with IF EXISTS
+DROP TABLE IF EXISTS books, books_archive;
 ```
 
 ---

@@ -258,34 +258,36 @@ SELECT * FROM students;  -- Still exists!
 -- =============================================
 -- ANSWER KEY — CREATE, ALTER & DROP TABLE SOLUTIONS
 -- =============================================
+-- =============================================
+-- 6. HANDS-ON PRACTICE & VERIFIED SOLUTIONS
+-- =============================================
+
 -- 1. CREATE TABLE with constraints and inspect with \d
--- Note: \d displays column types, modifiers, and bound sequences.
-CREATE TABLE students (id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(100) UNIQUE, grade_point NUMERIC(3,2));
-\d students
+CREATE TABLE books (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title TEXT NOT NULL,
+    price NUMERIC(8,2)
+);
+\d books
 
--- 2. ALTER TABLE ADD, RENAME, and ALTER TYPE
--- Note: USING allows explicit casting during column type alteration.
-ALTER TABLE students ADD COLUMN phone VARCHAR(20);
-ALTER TABLE students RENAME COLUMN grade_point TO gpa;
-ALTER TABLE students ALTER COLUMN gpa TYPE NUMERIC(4,2) USING gpa::numeric(4,2);
+-- 2. ALTER TABLE ADD, RENAME, and ALTER TYPE USING
+ALTER TABLE books ADD COLUMN isbn TEXT;
+ALTER TABLE books RENAME COLUMN title TO book_title;
+ALTER TABLE books ALTER COLUMN price TYPE INT USING price::int;
 
--- 3. Duplicate table structure with LIKE
--- Note: INCLUDING ALL copies defaults, constraints, and indexes.
-CREATE TABLE students_backup (LIKE students INCLUDING ALL);
+-- 3. TRUNCATE TABLE with RESTART IDENTITY
+TRUNCATE TABLE books RESTART IDENTITY;
+INSERT INTO books (book_title, price) VALUES ('SQL Guide', 25) RETURNING id;
 
--- 4. TRUNCATE and reset identity sequence
--- Note: RESTART IDENTITY forces the counter back to 1.
-TRUNCATE TABLE students RESTART IDENTITY;
-INSERT INTO students (name, email, gpa) VALUES ('Ravi', 'ravi@uni.com', 3.85);
-SELECT id, name FROM students;
-
--- 5. Transactional DROP safety with ROLLBACK
--- Note: PostgreSQL DDL runs inside transactions safely.
+-- 4. Transactional DROP safety with ROLLBACK
 BEGIN;
-DROP TABLE students;
-SELECT to_regclass('students'); -- returns NULL
+DROP TABLE books;
+SELECT to_regclass('books'); -- Returns NULL (table dropped in txn)
 ROLLBACK;
-SELECT to_regclass('students'); -- returns 'students'
+SELECT to_regclass('books'); -- Returns 'books' (table fully restored!)
+
+-- 5. Safe idempotent DROP with IF EXISTS
+DROP TABLE IF EXISTS books, books_archive;
 
 
 -- === CLEANUP ===
