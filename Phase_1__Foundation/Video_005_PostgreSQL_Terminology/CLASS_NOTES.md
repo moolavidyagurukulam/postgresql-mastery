@@ -99,52 +99,69 @@ Now the terms you will use most often ... table, row, and column. ... A table is
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **A table** | a structured collection of data organized in rows and columns |
-| **A row** | one complete record |
-| **A column** | one piece of information |
-| **Table** | also called a relation |
-| **Column** | also called an attribute or field |
+| **Table** | Structured rows & columns (math term: Relation) |
+| **Row** | One complete record, e.g. one customer (math term: Tuple) |
+| **Column** | One data attribute like name or price (math term: Attribute) |
 
 ### Other Database Objects
 Inside a schema, you can have more than just tables. Let me introduce the other important objects. ... An index is a structure that makes searching faster. Like the index at the back of a book ... instead of reading every page, you jump directly to the right one. ... A view is a saved query. You write a complex query once, save it as a view, and then query the view like a table. The data is not duplicated ... it runs the query every time you use the view. ... A function is reusable code that runs inside the database. You can write functions in SQL or PL/pgSQL ... PostgreSQL's procedural language. ... A trigger is code that runs automatically when something happens to a table ... like after an INSERT or before a DELETE. Useful for audit logs and business rules. ... A sequence is a number generator that produces unique values. It is used behind SERIAL and IDENTITY columns to auto-generate IDs.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **An index** | a structure that makes searching faster |
-| **A view** | a saved query |
-| **The data** | not duplicated |
-| **A function** | reusable code that runs inside the database |
-| **A trigger** | code that runs automatically when something happens to a table |
-| **A sequence** | a number generator that produces unique values |
+| **Index** | Fast lookup structure (like the index at the back of a book) |
+| **View** | Saved SQL query queried like a table without duplicating data |
+| **Function** | Reusable SQL or PL/pgSQL code executed inside the DB |
+| **Trigger** | Runs automatically on INSERT/UPDATE/DELETE for audits & rules |
+| **Sequence** | Auto-number generator backing SERIAL and IDENTITY columns |
 
 ### Connection & Security Terms
 A few more terms about connecting to PostgreSQL. ... A role is a user or group in PostgreSQL. PostgreSQL does not have separate concepts for users and groups ... it uses roles for both. A role with the LOGIN privilege is essentially a user. A role without LOGIN is a group. ... A session is one connection to the database. When you open psql or your application connects, that is one session. ... A transaction is a set of operations that must all succeed or all fail together. We will learn much more about transactions later. ... The port is the network address where PostgreSQL listens. The default is 5432. ... The superuser is the admin role with all privileges. By default, it is called postgres.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **A role** | a user or group in PostgreSQL |
-| **A role with the LOGIN privilege** | essentially a user |
-| **A session** | one connection to the database |
-| **A transaction** | a set of operations that must all succeed or all fail together |
-| **The port** | the network address where PostgreSQL listens |
-| **The superuser** | the admin role with all privileges |
+| **Role** | Users & groups combined (LOGIN = user; no LOGIN = group) |
+| **Session** | One active client connection from psql or your application |
+| **Transaction** | All-or-nothing unit of work protecting consistency |
+| **Port & Admin** | Default TCP port is 5432; default superuser role is postgres |
 
 ### Important Files & Directories
 Finally, some file and directory terms you will encounter. ... The data directory is where PostgreSQL stores all its data. On Debian and Ubuntu, it is at var lib postgresql 16 main. On Red Hat, it is at var lib pgsql 16 data. This is the most important directory ... if you lose it and have no backup, you lose all your data. ... postgresql.conf is the main configuration file. It controls memory, connections, logging, and hundreds of other settings. ... pg_hba.conf is the authentication configuration file. It controls who can connect and how they authenticate. ... pg_wal is the directory that stores Write Ahead Log files. These are critical for crash recovery and replication. ... We will work with all of these files in detail throughout this course.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **The data directory** | where PostgreSQL stores all its data |
-| **This** | the most important directory |
-| **These** | critical for crash recovery and replication |
-| **We will** | with all of these files in detail throughout this course |
+| **Data Directory** | Stores all cluster files (/var/lib/postgresql/16/main on Debian) |
+| **postgresql.conf** | Main config file for memory, connections, logging & WAL |
+| **pg_hba.conf** | Client access rules: who can connect and how they log in |
+| **pg_wal/** | Write-Ahead Log files powering crash recovery & replication |
 
 
 ---
 
 ## 3. Hands-On Commands & psql Output
 
-*(Refer to the attached `materials.sql` script for full runnable queries and setups for this topic.)*
+### Seeing Cluster, Database & Schema Live in psql
+**Explanation:** Let us see how Cluster, Database, and Schema actually look inside PostgreSQL when you connect! ... When you type backslash l, PostgreSQL lists every isolated database inside the single running cluster — here postgres and practice. ... Next, you switch into the practice database using backslash c practice, and type backslash d n to list all schemas inside it — showing the default public schema owned by pg_database_owner in PostgreSQL 16. ... Finally, running SELECT current_database, current_schema, and inet_server_port confirms practice, public, and port 5432. One cluster port serving isolated databases, each containing organized schemas!
+
+```sql
+-- 1. View all Databases inside this PostgreSQL Cluster
+postgres=# \l
+   Name    |  Owner   | Encoding | Locale Provider
+-----------+----------+----------+-----------------
+ postgres  | postgres | UTF8     | libc
+ practice  | postgres | UTF8     | libc
+
+-- 2. Connect into one Database, then list its Schemas
+postgres=# \c practice
+You are now connected to database "practice" as user "postgres".
+practice=# \dn
+  Name  |       Owner
+--------+-------------------
+ public | pg_database_owner
+
+-- 3. Confirm current database, schema & cluster port
+practice=# SELECT current_database(), current_schema(), inet_server_port();
+ practice | public | 5432
+```
 
 
 ---

@@ -121,6 +121,27 @@ CREATE DATABASE practice;
 -- Exercise 5:
 -- Try connecting without -U postgres. See the error. Then connect correctly.
 
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- SELECT version(); prints "PostgreSQL 16.x ..." confirming PostgreSQL 16 is running.
+
+-- Answer 2:
+-- CREATE DATABASE practice; creates the DB, \c practice switches into it,
+-- and \conninfo shows database, user, host/socket, and port (5432).
+
+-- Answer 3:
+-- On Linux: /etc/postgresql/16/main/postgresql.conf (Debian/Ubuntu) or
+-- $PGDATA/postgresql.conf. On Windows: C:\Program Files\PostgreSQL\16\data\postgresql.conf.
+
+-- Answer 4:
+-- Linux: sudo systemctl stop postgresql && sudo systemctl start postgresql && sudo systemctl status postgresql.
+-- Windows: Services -> postgresql-x64-16 -> Stop / Start (or net stop / net start).
+
+-- Answer 5:
+-- Without -U postgres, psql uses your OS username and fails if no matching PG role exists.
+-- Fix: psql -U postgres (or create a matching role).
+
 -- =============================================
 -- Next Class: psql Command-Line Tool
 -- =============================================

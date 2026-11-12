@@ -134,6 +134,23 @@ SELECT * FROM products;
 -- DROP TABLE IF EXISTS students;
 -- DROP TABLE IF EXISTS products;
 
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- \l lists all databases; \c postgres switches to postgres; \c practice returns to practice.
+
+-- Answer 2:
+-- \d products shows columns (id, name, price, in_stock), types, NOT NULL, defaults, and PK index.
+
+-- Answer 3:
+-- Run \timing once to toggle timing ON; re-running SELECT * FROM products; prints "Time: X.XXX ms".
+
+-- Answer 4:
+-- \x switches to expanded vertical card view (great for wide tables); \x again restores normal grid.
+
+-- Answer 5:
+-- \o /tmp/products.txt redirects output to file; \o (no path) stops redirection; \! runs OS shell command.
+
 -- =============================================
 -- Next Class: pgAdmin GUI Tool
 -- =============================================

@@ -75,6 +75,26 @@
 -- Your friend says "cluster of PG servers for HA."
 -- Explain why 'cluster' means something different in PostgreSQL.
 
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- Cluster (PG server instance) -> Database (isolated project) -> Schema (folder/namespace) -> Table (rows & columns).
+
+-- Answer 2:
+-- postgres (default admin/connection DB), template1 (blueprint copied by CREATE DATABASE),
+-- template0 (clean factory fallback template, never modify).
+
+-- Answer 3:
+-- Row (tuple) = one complete record (e.g., student Ravi, age 20).
+-- Column (attribute) = one field across all records (e.g., name, email).
+
+-- Answer 4:
+-- Views, Indexes, Sequences, Functions/Procedures, Custom Data Types (also Triggers, Domains).
+
+-- Answer 5:
+-- Outside PG, 'cluster' means multiple servers. Inside PostgreSQL, a 'cluster'
+-- is ONE running PostgreSQL server instance managing multiple databases on one data directory.
+
 -- =============================================
 -- Next Class: Install PostgreSQL 16
 -- =============================================

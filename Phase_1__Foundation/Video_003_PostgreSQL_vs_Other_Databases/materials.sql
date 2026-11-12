@@ -62,6 +62,28 @@
 -- Project has relational data AND JSON documents from an API.
 -- Should they use PostgreSQL, MongoDB, or both? Explain.
 
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- PostgreSQL ? profiles, posts, comments, likes, and followers have rich
+-- relationships, need ACID integrity, and scale to billions of rows.
+
+-- Answer 2:
+-- YES ? they save Rs 50 lakh/year in licensing. Gain: zero cost, JSONB,
+-- full SQL compliance. Lose: Oracle RAC active-active clustering & Oracle-only syntax.
+
+-- Answer 3:
+-- Ask: (1) Need complex joins/analytics? (2) Need JSON + relational together?
+-- (3) Need strict SQL compliance & extensions (like PostGIS)? If yes -> PostgreSQL.
+
+-- Answer 4:
+-- Oracle can do native active-active shared-disk clustering (RAC) out of the box.
+-- PostgreSQL gives partitioning, parallel queries, and full-text search FREE (Oracle charges extra).
+
+-- Answer 5:
+-- PostgreSQL alone! Its JSONB column type stores indexed JSON documents right
+-- alongside relational tables ? no need to maintain two separate databases.
+
 -- =============================================
 -- Next Class: PostgreSQL Distributions
 -- =============================================

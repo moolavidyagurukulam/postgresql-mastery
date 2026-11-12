@@ -154,6 +154,24 @@ DROP DATABASE IF EXISTS webapp_db;
 DROP ROLE IF EXISTS webapp;
 -- \l
 
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- CREATE DATABASE school; creates it; \l confirms it in the list; \c school connects to it.
+
+-- Answer 2:
+-- Creates inventory owned by postgres with UTF8 encoding and max 50 concurrent connections.
+
+-- Answer 3:
+-- ALTER DATABASE school RENAME TO school_v2; and ALTER DATABASE school_v2 CONNECTION LIMIT 20;
+-- (Note: you cannot rename a database while connected to it ? run from postgres DB.)
+
+-- Answer 4:
+-- pg_database_size(datname) returns bytes; pg_size_pretty(...) formats into KB / MB / GB sorted largest first.
+
+-- Answer 5:
+-- Switch to \c postgres first (cannot drop the DB you are currently connected to), then DROP DATABASE IF EXISTS ...;
+
 -- =============================================
 -- Next Class: Schemas
 -- =============================================

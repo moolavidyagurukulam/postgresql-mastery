@@ -46,60 +46,52 @@ Let us start with the most common comparison ... PostgreSQL vs MySQL. ... MySQL 
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **MySQL** | created in 1995 and is now owned by Oracle Corporation |
-| **The community edition** | free, but the enterprise edition costs money |
-| **PostgreSQL** | completely free with no paid version needed |
-| **InnoDB also** | M V C C, but PostgreSQL's implementation is more mature |
+| **Licensing** | MySQL: Oracle dual-license | PG: 100% free, zero paid editions |
+| **SQL Standard** | PG leads on window functions, CTEs, FULL OUTER JOIN, MERGE |
+| **Data Types** | PG adds Arrays, JSONB, Ranges, INET/CIDR, custom types |
+| **Concurrency** | PG mature MVCC keeps readers & writers from blocking |
+| **Bottom Line** | MySQL is easy to start; PG excels at complex enterprise workloads |
 
 ### PostgreSQL vs Oracle
 Now let us compare PostgreSQL with Oracle Database. ... Oracle is the king of enterprise databases. It has been around since 1979 and dominates banks, governments, and large corporations. ... But Oracle comes with a massive price tag. Oracle Standard Edition costs around 17000 dollars per processor. Enterprise Edition costs around 47000 dollars per processor. And that is just the base license ... many features like partitioning, compression, and advanced security are additional paid options. ... PostgreSQL gives you most of these features for free. Partitioning ... free. Full-text search ... free. Replication ... free. JSON support ... free. ... The gap between Oracle and PostgreSQL has been shrinking every year. Many organizations are migrating from Oracle to PostgreSQL specifically to save on licensing costs. ... Oracle is still stronger in some areas like Real Application Clusters for horizontal scaling, and its optimizer is more mature for extremely complex queries. But for the vast majority of workloads, PostgreSQL matches Oracle's capabilities at zero cost.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **Oracle** | the king of enterprise databases |
-| **Oracle Standard Edition** | around 17000 dollars per processor |
-| **Enterprise Edition** | around 47000 dollars per processor |
-| **And that** | just the base license |
-| **The gap between Oracle and PostgreSQL** | been shrinking every year |
-| **Many organizations** | migrating from Oracle to PostgreSQL specifically to save on licensing costs |
+| **License Cost** | Oracle: ~$17K–$47K/CPU + paid add-ons | PG: $0 forever |
+| **Free Features** | Partitioning, replication, full-text & JSON included free in PG |
+| **Oracle Strength** | Real Application Clusters (RAC) for extreme multi-node write scale |
+| **Migration Trend** | Banks & enterprises actively migrate Oracle workloads to PG |
 
 ### PostgreSQL vs SQL Server
 Next, PostgreSQL vs Microsoft SQL Server. ... SQL Server is Microsoft's database, popular in organizations that use the Microsoft ecosystem ... Windows Server, dot NET, Azure. ... SQL Server has a free Express edition, but it is limited to 10 gigabytes of data and 1 gigabyte of RAM. The Standard edition starts at around 3900 dollars per core. Enterprise is even more expensive. ... PostgreSQL has no such limits. You can use all your RAM, all your disk, and all your cores ... for free. ... SQL Server is tightly integrated with Windows and the Microsoft ecosystem. If your company is all-in on Microsoft, SQL Server makes sense. ... But PostgreSQL runs on Linux, Windows, and Mac. It works with any programming language and any framework. It is not locked to any vendor's ecosystem. ... Feature-wise, they are very close. Both have strong SQL support, both handle complex queries well, both have good replication. The main difference is cost and vendor independence.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **SQL Server** | Microsoft's database, popular in organizations that use the Microsoft ecosystem |
-| **Enterprise** | even more expensive |
-| **PostgreSQL** | no such limits |
-| **You can** | all your RAM, all your disk, and all your cores |
-| **If your company** | all-in on Microsoft, SQL Server makes sense |
-| **But PostgreSQL** | on Linux, Windows, and Mac |
-| **The main difference** | cost and vendor independence |
+| **Limits & Cost** | MSSQL Express caps 10GB/1GB RAM; Standard ~$3.9K/core | PG: no caps |
+| **Ecosystem** | SQL Server shines inside Windows, .NET & Microsoft shops |
+| **OS Portability** | PostgreSQL runs natively on Linux, Windows, macOS & cloud |
+| **Key Difference** | Matched features — main separator is cost & vendor freedom |
 
 ### PostgreSQL vs MongoDB
 Finally, PostgreSQL vs MongoDB. This is a different kind of comparison because MongoDB is NOT a relational database. It is a document database. ... MongoDB stores data as JSON-like documents in collections. There are no tables, no rows, no columns. Each document can have a different structure. This is called schema-less or schema-flexible. ... PostgreSQL, on the other hand, stores data in structured tables with defined columns. BUT ... and this is important ... PostgreSQL also supports JSONB. This means you can store JSON documents inside PostgreSQL, with full indexing and querying support. ... So when do you choose MongoDB? When your data truly has no fixed structure and changes frequently. When you need to store deeply nested documents. When you want the simplest possible setup for a prototype. ... When do you choose PostgreSQL? When your data has relationships. When you need transactions across multiple tables. When you want BOTH structured and unstructured data in one database. ... In practice, PostgreSQL with JSONB covers most use cases where people think they need MongoDB.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **This** | a different kind of comparison because MongoDB is NOT a relational database |
-| **MongoDB** | data as JSON-like documents in collections |
-| **There** | no tables, no rows, no columns |
-| **When your data truly** | no fixed structure and changes frequently |
-| **When you need to** | deeply nested documents |
-| **When your data** | relationships |
-| **PostgreSQL with JSONB covers most** | cases where people think they need MongoDB |
+| **Data Model** | MongoDB: schema-less JSON collections | PG: tables + JSONB |
+| **Use MongoDB** | Truly unfixed nested schemas with zero relational JOINs |
+| **Use PostgreSQL** | Relationships, multi-table ACID transactions, or relational + JSONB |
+| **Real Practice** | PG's indexed JSONB covers most use cases cleanly in one DB |
 
-### The Big Comparison — All Databases Side by Side
+### PostgreSQL vs MySQL vs Oracle vs SQL Server vs MongoDB
 Let me give you one big comparison table so you can see all four databases side by side. This is the kind of table you should save for future reference. ... The key takeaway is this ... PostgreSQL gives you the best balance of features, cost, and standards compliance. It is free like MySQL, powerful like Oracle, modern like SQL Server, and flexible like MongoDB. That is why it is called the world's most advanced open source database.
 
-| Term | Meaning / Explanation |
-| :--- | :--- |
-| **Point 1** | Let me give you one big comparison table so you can see all four databases side by side |
-| **Point 2** | This is the kind of table you should save for future reference |
-| **Point 3** | The key takeaway is this |
-| **Point 4** | PostgreSQL gives you the best balance of features, cost, and standards compliance |
-| **It is free like MySQL** | powerful like Oracle, modern like SQL Server, and flexible like MongoDB |
-| **Point 6** | That is why it is called the world's most advanced open source database |
+| Feature | PostgreSQL | MySQL | Oracle | SQL Server | MongoDB |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| License Cost | $0 Forever | Dual / Paid Ent. | $17K-$47K/CPU | ~$3.9K+/core | Free / Atlas Paid |
+| Data Model | Relational + JSONB | Relational | Relational | Relational | JSON Documents |
+| SQL Standard | Highest | Good (Gaps) | High | High (T-SQL) | No SQL (MQL) |
+| Partitioning | 100% Free | Free / Paid Ent. | Extra Paid Addon | Ent. Edition | Built-in Replica |
+| Best Fit | 80%+ Apps/Ent. | Simple Web/LAMP | Legacy Banks/RAC | .NET/Windows | Unstructured Docs |
 
 ### Decision Framework: Choosing a Database
 Let me give you a simple decision framework. When someone asks you which database to use, ask these questions. ... Question 1 ... Is budget a concern? If yes, eliminate Oracle and SQL Server Enterprise. PostgreSQL and MySQL are both free. ... Question 2 ... Do you need advanced SQL features like window functions, CTEs, and full outer joins? If yes, PostgreSQL is the better choice over MySQL. ... Question 3 ... Is your team already in the Microsoft ecosystem? If yes, SQL Server integrates well. If not, PostgreSQL is more flexible. ... Question 4 ... Is your data truly schema-less with no relationships? If yes, consider MongoDB. If you have ANY relationships between data, use PostgreSQL. ... Question 5 ... Do you need enterprise features like partitioning and replication without paying? PostgreSQL gives these for free. Oracle charges extra. ... For most new projects in 2026, PostgreSQL is the safest and most capable choice.
@@ -111,12 +103,40 @@ Let me give you a simple decision framework. When someone asks you which databas
 - Q5: Need enterprise features for free? → PostgreSQL wins
 - For most new projects: PostgreSQL is the safest choice
 
+### Real-World Database Choice & Migration Cases
+Before we summarize, let us look at three real-world decisions engineers face. ... First, an online store needs rock-solid ACID transactions for customer payments, PLUS flexible JSONB columns for product specs that differ between phones and shoes ... PostgreSQL handles both natively. ... Second, many banks and SaaS companies migrate away from expensive Oracle servers to PostgreSQL because partitioning, replication, and roles come included for zero licensing cost. ... Third, many startups begin with MongoDB only to hit pain later when finance asks for complex multi-table joins. Starting on PostgreSQL prevents costly rewrites down the road.
+
+> **Definition:** Why modern engineering teams migrate TO PostgreSQL in production.
+
+| Term | Meaning / Explanation |
+| :--- | :--- |
+| **E-Commerce** | Chose PostgreSQL for strict ACID orders + JSONB product specs |
+| **Banking Move** | Replaced costly Oracle licenses using PG partitioning + logical replication |
+| **Startup Trap** | Started on MongoDB for speed, struggled later with billing JOIN reports |
+| **Lesson** | Start relational + JSONB in PostgreSQL unless data has zero relationships |
+
 
 ---
 
 ## 3. Hands-On Commands & psql Output
 
-*(Refer to the attached `materials.sql` script for full runnable queries and setups for this topic.)*
+### What PostgreSQL Lets You Write (Built-In & Free)
+**Explanation:** To make these differences real, look at what PostgreSQL lets you write cleanly in a single database. ... In one query, you can combine a Common Table Expression with a window function like RANK OVER to analyze departmental revenue, and atomically save the result with INSERT ON CONFLICT DO UPDATE. ... Even better, right below that, you can query strict relational tables alongside semi-structured JSONB preferences using the containment operator. Features like window functions, atomic upsert, and fast indexed JSONB explain why teams consolidate onto PostgreSQL instead of juggling multiple databases.
+
+```sql
+-- CTEs, Window Functions, UPSERT & Indexed JSONB all in ONE engine:
+WITH monthly AS (
+  SELECT dept, SUM(revenue) AS rev,
+         RANK() OVER (ORDER BY SUM(revenue) DESC) AS rnk
+  FROM orders GROUP BY dept
+)
+INSERT INTO dept_summary (dept, total_rev, top_rank)
+SELECT dept, rev, rnk FROM monthly
+ON CONFLICT (dept) DO UPDATE SET total_rev = EXCLUDED.total_rev;
+
+-- Query relational columns + JSONB attributes together:
+SELECT id, prefs->>'theme' FROM users WHERE prefs @> '{"pro": true}';
+```
 
 
 ---

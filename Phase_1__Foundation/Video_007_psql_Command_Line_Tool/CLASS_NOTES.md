@@ -46,7 +46,7 @@ psql has two types of commands. SQL commands and meta-commands. ... SQL commands
 |  | \? = show ALL meta-commands |
 
 ### psql Listing Commands — Cheat Sheet
-Here is a complete reference of all the backslash d listing commands. Save this as a cheat sheet.
+Keep this complete listing cheat sheet handy whenever you work in psql. ... Remember the simple rule: backslash l lists databases, backslash c connects to another database, and backslash d describes things. ... Add a second letter to target exactly what you need: n for schemas, t for tables, i for indexes, v for views, f for functions, and u for users. ... Add a plus sign like backslash d plus for extra table details, and backslash question mark anytime for help!
 
 | Command | What It Shows |
 | :--- | :--- |

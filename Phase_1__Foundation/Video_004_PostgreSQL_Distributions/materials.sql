@@ -69,6 +69,28 @@
 -- What does "vendor lock-in" mean?
 -- How could it hurt a company using cloud-managed PostgreSQL?
 
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- postgresql.org/download lists Linux (Ubuntu/Debian/RHEL), Windows, macOS,
+-- BSD, and source code across PostgreSQL 16 (course baseline) and newer releases.
+
+-- Answer 2:
+-- Community PostgreSQL ? with 2 skilled DBAs and no Oracle legacy, you get
+-- 100% full features for zero license cost and complete control.
+
+-- Answer 3:
+-- Cloud-managed (AWS RDS / Azure / Cloud SQL) ? with 3 devs and no DBA,
+-- managed backups, patching, and high availability let them launch fast.
+
+-- Answer 4:
+-- A 4 vCPU / 16 GB managed RDS instance typically costs ~2?3x a raw Linux VM
+-- of similar specs because managed backups, HA, and patching are bundled in.
+
+-- Answer 5:
+-- Vendor lock-in means relying on proprietary cloud features (like Aurora-only
+-- APIs) that make migrating away later expensive and time-consuming.
+
 -- =============================================
 -- Next Class: PostgreSQL Terminology
 -- =============================================

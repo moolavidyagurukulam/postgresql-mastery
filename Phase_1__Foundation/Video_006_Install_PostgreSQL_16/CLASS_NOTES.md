@@ -57,7 +57,7 @@ Why PostgreSQL 16 specifically? ... PostgreSQL 16 was released in September 2023
 - Every command tested on PG 16 — your output will match ours
 
 ### Linux File Paths Reference (Debian/Ubuntu)
-Let me give you a clean reference table of all the important paths. Save this ... you will need it throughout the course.
+Save this reference table of your four key Linux folders—you will open them constantly as a DBA. ... Configuration files like postgresql.conf and pg_hba.conf live cleanly in etc postgresql 16 main. ... Actual table data and pg_wal crash logs live safely in var lib postgresql 16 main. ... Finally, server error logs sit in var log postgresql, and tools like pg_dump live in usr lib postgresql 16 bin.
 
 | What | Path |
 | :--- | :--- |
@@ -81,7 +81,7 @@ Now let us cover the Windows installation. ... Step 1 ... Go to postgresql.org s
 - Step 7: Click Next → Install → Wait → Done!
 
 ### Windows File Paths Reference
-On Windows, the file paths are different. Here is the reference table. The key difference is that on Windows, all config files are inside the data directory, not in a separate config directory like on Linux.
+On Windows, notice how PostgreSQL organizes folders slightly differently than Linux. ... All program executables and psql live inside C Program Files PostgreSQL 16 bin, while your cluster data AND config files sit together inside the data folder: postgresql.conf, pg_hba.conf, and the log subfolder. Knowing where both OSes store config saves hours when troubleshooting!
 
 | What | Path |
 | :--- | :--- |
@@ -119,7 +119,7 @@ Reading package lists... Done
 ```
 
 ### Linux Install — Step 2: Install PostgreSQL 16
-**Explanation:** Step 2 ... Install PostgreSQL 16. This one command installs the PostgreSQL 16 server, the client tools including psql, and all required libraries.
+**Explanation:** Step 2 ... install PostgreSQL 16 with one clean command: sudo apt install postgresql dash 16. ... Watch what apt automatically sets up for you: it installs the database server package, the psql command-line client tools, and calls initdb to create your first default cluster called 16 slash main inside var lib postgresql. ... Wait a few seconds, and your PostgreSQL 16 server is already initialized and running!
 
 ```sql
 -- Install PostgreSQL 16 server and client
@@ -331,7 +331,7 @@ Practice time! ... Exercise 1 ... Install PostgreSQL 16 on your machine followin
 
 ## 7. Key Takeaways & Cheat Sheet
 
-Let me give you a clean reference table of all the important paths. Save this ... you will need it throughout the course.
+Save this reference table of your four key Linux folders—you will open them constantly as a DBA. ... Configuration files like postgresql.conf and pg_hba.conf live cleanly in etc postgresql 16 main. ... Actual table data and pg_wal crash logs live safely in var lib postgresql 16 main. ... Finally, server error logs sit in var log postgresql, and tools like pg_dump live in usr lib postgresql 16 bin.
 
 
 Let us summarize. ... On Linux ... add the PostgreSQL repository, install postgresql-16, it starts automatically. Connect with sudo minus u postgres psql. ... On Windows ... download from postgresql.org, run the installer, set a password, connect with psql minus U postgres. ... We created our practice database that we will use throughout the course. ... Key commands are systemctl start, stop, restart, reload on Linux. ... Config files are in etc postgresql 16 main on Linux, and in the data directory on Windows. ... In our next class, we learn psql ... the powerful command-line tool for working with PostgreSQL!

@@ -126,6 +126,23 @@ SELECT * FROM courses;
 
 -- 4. Thinking pgAdmin replaces psql → they are complementary, learn BOTH
 
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- Register Server -> General (Name: Local PG16) -> Connection (Host: localhost, Port: 5432, User: postgres).
+
+-- Answer 2:
+-- Databases -> practice -> Schemas -> public -> Tables -> students -> Right-click -> View/Edit Data -> All Rows.
+
+-- Answer 3:
+-- Tools -> Query Tool -> type SELECT * FROM students; -> press F5 (or Execute button) to see Data Output.
+
+-- Answer 4:
+-- Verify in Query Tool with: SELECT * FROM courses; and in psql with: \d courses.
+
+-- Answer 5:
+-- Server -> Dashboard tab -> "Sessions" / "Server Activity" shows active & idle client connections in real time.
+
 -- =============================================
 -- Phase 1: Foundation — COMPLETE!
 -- Next Phase: Phase 2 — Database Basics
