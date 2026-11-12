@@ -143,3 +143,28 @@ WHERE schemaname = 'public';
 -- =============================================
 -- Next Class: Data Types — Numeric & Text
 -- =============================================
+
+
+-- === ANSWER KEY ===
+
+-- Answer 1:
+-- \db+
+SELECT spcname, pg_size_pretty(pg_tablespace_size(spcname)) AS size
+FROM pg_tablespace;
+
+-- Answer 2:
+-- (On Linux: sudo mkdir -p /mnt/fast_ssd/pg_data && sudo chown postgres:postgres /mnt/fast_ssd/pg_data)
+-- CREATE TABLESPACE fast_ssd LOCATION '/mnt/fast_ssd/pg_data';
+-- CREATE TABLE t1 (id INT) TABLESPACE fast_ssd;
+
+-- Answer 3:
+SELECT tablename, COALESCE(tablespace, 'pg_default') AS tablespace_name
+FROM pg_tables
+WHERE schemaname = 'public';
+
+-- Answer 4:
+-- ALTER TABLE t1 SET TABLESPACE pg_default;
+
+-- Answer 5:
+-- Managed cloud DBs (AWS RDS, Azure, Cloud SQL) restrict custom OS paths;
+-- choose storage classes / provisioned IOPS tiers instead.
