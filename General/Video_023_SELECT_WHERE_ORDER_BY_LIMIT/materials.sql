@@ -299,6 +299,46 @@ SELECT id, name FROM employees ORDER BY id LIMIT 4;
 -- Remember last_id, then:
 -- SELECT id, name FROM employees WHERE id > <last_id> ORDER BY id LIMIT 4;
 
+
+-- =============================================
+-- ANSWER KEY — SELECT, WHERE, ORDER BY & LIMIT SOLUTIONS
+-- =============================================
+-- 1. Find Engineering employees earning over $90,000
+-- Note: AND requires both conditions to evaluate to true.
+SELECT id, name, department, salary
+FROM employees
+WHERE department = 'Engineering' AND salary > 90000
+ORDER BY salary DESC;
+
+-- 2. Pattern matching with LIKE / ILIKE
+-- Note: ILIKE is PostgreSQL-specific case-insensitive matching.
+SELECT id, name, email
+FROM customers
+WHERE name ILIKE 'john%'
+ORDER BY name ASC;
+
+-- 3. BETWEEN and IN filters
+-- Note: BETWEEN is inclusive of both boundary endpoints.
+SELECT id, title, price
+FROM products
+WHERE price BETWEEN 20.00 AND 100.00
+  AND category IN ('Electronics', 'Accessories')
+ORDER BY price ASC;
+
+-- 4. Handling NULL values cleanly
+-- Note: Always use IS NOT NULL (never != NULL).
+SELECT id, name, phone
+FROM clients
+WHERE phone IS NOT NULL;
+
+-- 5. Pagination with LIMIT and OFFSET
+-- Note: Fetches page 3 of 10 items per page.
+SELECT id, name, created_at
+FROM audit_logs
+ORDER BY created_at DESC
+LIMIT 10 OFFSET 20;
+
+
 -- === CLEANUP ===
 -- DROP TABLE IF EXISTS employees;
 
