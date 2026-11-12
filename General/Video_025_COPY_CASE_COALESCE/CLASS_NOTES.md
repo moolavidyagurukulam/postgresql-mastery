@@ -327,6 +327,43 @@ Practice time. Export employees to CSV and check the file. Import a CSV into a s
 
 ---
 
+
+### Answer Key — COPY, CASE & COALESCE Solutions
+
+```sql
+-- 1. Export query results to CSV with \copy
+-- Note: \copy runs on client-side with user permissions.
+\copy (SELECT id, name, salary FROM employees WHERE salary > 80000) TO 'high_earners.csv' WITH (FORMAT CSV, HEADER);
+
+-- 2. Import CSV into staging table
+-- Note: Staging tables avoid locking production tables during ETL.
+\copy staging_users FROM 'users.csv' WITH (FORMAT CSV, HEADER);
+
+-- 3. Conditional salary tiers with CASE WHEN
+-- Note: CASE WHEN evaluates top-to-bottom and stops on first match.
+SELECT id, name, salary,
+  CASE
+    WHEN salary >= 100000 THEN 'Senior'
+    WHEN salary >= 70000  THEN 'Mid-Level'
+    ELSE 'Junior'
+  END AS salary_tier
+FROM employees;
+
+-- 4. Replace NULL values with COALESCE
+-- Note: COALESCE returns the first non-null argument in the list.
+SELECT id, name, COALESCE(phone, mobile, 'No Phone') AS contact_phone
+FROM contacts;
+
+-- 5. Prevent division by zero with NULLIF
+-- Note: NULLIF(units, 0) returns NULL if units is 0, avoiding runtime crash.
+SELECT id, revenue, units,
+  revenue / NULLIF(units, 0) AS revenue_per_unit
+FROM sales_batches;
+
+```
+
+---
+
 ## 7. Key Takeaways & Cheat Sheet
 
 Let's recap. Backslash copy TO exports and FROM imports CSV data at high speed. Use backslash copy for client-side files, server COPY for server-side. CASE WHEN adds conditional logic anywhere in your queries. COALESCE returns the first non-null value — your go-to for defaults. NULLIF prevents division by zero. GREATEST and LEAST enforce ranges. These tools complete your DML toolkit.
