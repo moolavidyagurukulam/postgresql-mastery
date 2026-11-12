@@ -181,3 +181,22 @@ SELECT ROUND(10::NUMERIC / 3, 2) AS rounded;  -- 3.33
 -- Next Phase: Phase 3 — Database Design
 -- Next Class: Normalization
 -- =============================================
+
+-- === ANSWER KEY ===
+-- 1. Table with UUID primary key using gen_random_uuid()
+CREATE TABLE api_keys (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), label TEXT);
+INSERT INTO api_keys (label) VALUES ('web'), ('mobile'), ('cli');
+
+-- 2. INET column and subnet containment query
+CREATE TABLE access_logs (id SERIAL, client_ip INET);
+SELECT * FROM access_logs WHERE client_ip << '192.168.0.0/16'::inet;
+
+-- 3. Casting examples
+SELECT '42'::int + 8 AS sum_val, NOW()::date AS today, 100::text || ' items' AS label;
+
+-- 4. Invalid casts raise clean errors
+-- SELECT 'hello'::int;
+-- SELECT 999::boolean;
+
+-- 5. Integer vs NUMERIC division
+SELECT 10 / 3 AS int_div, 10::numeric / 3 AS exact_div;
