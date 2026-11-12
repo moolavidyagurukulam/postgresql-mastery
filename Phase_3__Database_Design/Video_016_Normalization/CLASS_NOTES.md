@@ -90,11 +90,15 @@ Boyce-Codd Normal Form, or BCNF. This is a stricter version of 3NF. ... In BCNF,
 - Don't over-engineer: 3NF is the practical target for most database designs
 
 ### Normal Forms — Quick Comparison
-Here is a quick comparison of all four normal forms.
+Here is your simple roadmap of all four normal forms so you know exactly how far to normalize in real jobs. ... Think of normalizing like organizing your home: First Normal Form puts one item per box with a clear label—meaning atomic cells and a primary key. ... Second Normal Form removes half-key clutter when you have a composite key. ... Third Normal Form separates hidden side-dependencies so every fact lives in ONE table once—this is the sweet spot for almost every production app! ... BCNF only steps in for rare overlapping key edge cases.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **Point 1** | Here is a quick comparison of all four normal forms |
+| **1NF** | Atomic cells (no lists), unique row ID (Primary Key), no column1/column2 |
+| **2NF** | No partial dependency — every column fits the WHOLE composite key |
+| **3NF** | No hidden chain dependencies (key → the whole key → nothing but key) |
+| **BCNF** | Stricter 3NF where every determinant is a candidate key (rare cases) |
+| **Real Target** | Aim for 3NF in 95% of OLTP business applications |
 
 ### Benefits of Normalization
 Why normalize? ... Benefit 1: no data redundancy. Customer name stored once, not in every order. ... Benefit 2: data consistency. Change it in one place, it is correct everywhere. ... Benefit 3: no anomalies. Insert, update, and delete work cleanly. ... Benefit 4: smaller storage. No repeated data means less disk space. ... Benefit 5: easier maintenance. Schema changes affect fewer tables. ... The trade-off is that queries need JOINs, which can be slower. But for most applications, the benefits far outweigh the cost of JOINs. We will talk about when to break normalization rules in our next class on denormalization.
@@ -177,6 +181,30 @@ Practice time! ... Exercise 1 ... Look at this unnormalized student_courses tabl
 4. Exercise 4: JOIN query to reconstruct the original view
 5. Exercise 5: Compare UPDATE effort: normalized vs unnormalized
 
+
+---
+
+
+### Answer Key — Practice Solutions
+
+```sql
+-- 1. Separate authors and books via Foreign Key
+CREATE TABLE authors (id SERIAL PRIMARY KEY, name TEXT);
+CREATE TABLE books (id SERIAL PRIMARY KEY, title TEXT, author_id INT REFERENCES authors(id));
+
+-- 2. Junction table for 1NF (no comma-separated tags)
+CREATE TABLE post_tags (post_id INT REFERENCES posts(id), tag_id INT REFERENCES tags(id), PRIMARY KEY (post_id, tag_id));
+
+-- 3. Junction table for 2NF / 3NF enrollments
+CREATE TABLE enrollments (student_id INT REFERENCES students(id), course_id INT REFERENCES courses(id), enrolled_on DATE, PRIMARY KEY (student_id, course_id));
+
+-- 4. Update one customer city and verify joined orders
+UPDATE customers SET city = 'Bengaluru' WHERE id = 1;
+SELECT o.id, c.name, c.city FROM orders o JOIN customers c ON c.id = o.customer_id;
+
+-- 5. Multi-table JOIN for clean receipts
+SELECT o.id, c.name, p.title, oi.qty FROM orders o JOIN customers c ON c.id = o.customer_id JOIN order_items oi ON oi.order_id = o.id JOIN products p ON p.id = oi.product_id;
+```
 
 ---
 

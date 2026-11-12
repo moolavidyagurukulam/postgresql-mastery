@@ -196,3 +196,21 @@ ORDER BY s.name, c.name;
 -- =============================================
 -- Next Class: Denormalization
 -- =============================================
+
+-- === ANSWER KEY ===
+-- 1. Separate authors and books via Foreign Key
+CREATE TABLE authors (id SERIAL PRIMARY KEY, name TEXT);
+CREATE TABLE books (id SERIAL PRIMARY KEY, title TEXT, author_id INT REFERENCES authors(id));
+
+-- 2. Junction table for 1NF (no comma-separated tags)
+CREATE TABLE post_tags (post_id INT REFERENCES posts(id), tag_id INT REFERENCES tags(id), PRIMARY KEY (post_id, tag_id));
+
+-- 3. Junction table for 2NF / 3NF enrollments
+CREATE TABLE enrollments (student_id INT REFERENCES students(id), course_id INT REFERENCES courses(id), enrolled_on DATE, PRIMARY KEY (student_id, course_id));
+
+-- 4. Update one customer city and verify joined orders
+UPDATE customers SET city = 'Bengaluru' WHERE id = 1;
+SELECT o.id, c.name, c.city FROM orders o JOIN customers c ON c.id = o.customer_id;
+
+-- 5. Multi-table JOIN for clean receipts
+SELECT o.id, c.name, p.title, oi.qty FROM orders o JOIN customers c ON c.id = o.customer_id JOIN order_items oi ON oi.order_id = o.id JOIN products p ON p.id = oi.product_id;
