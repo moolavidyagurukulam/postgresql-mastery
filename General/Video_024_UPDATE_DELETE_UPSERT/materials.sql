@@ -272,6 +272,45 @@ BEGIN;
 ROLLBACK;
 SELECT price FROM products WHERE name = 'Laptop';  -- Original price!
 
+
+-- =============================================
+-- ANSWER KEY — UPDATE, DELETE & UPSERT SOLUTIONS
+-- =============================================
+-- 1. Give all products a 10% raise with RETURNING
+-- Note: RETURNING displays updated values immediately.
+UPDATE products
+SET price = ROUND(price * 1.10, 2)
+WHERE category = 'Electronics'
+RETURNING id, name, price AS new_price;
+
+-- 2. UPDATE FROM join syntax
+-- Note: PostgreSQL UPDATE FROM allows joining a source table cleanly.
+UPDATE products p
+SET price = s.new_price
+FROM price_staging s
+WHERE p.sku = s.sku;
+
+-- 3. DELETE with safety filter and RETURNING
+-- Note: Always double-check WHERE clauses before executing DELETE.
+DELETE FROM sessions
+WHERE last_active < NOW() - INTERVAL '30 days'
+RETURNING id, user_id;
+
+-- 4. UPSERT: ON CONFLICT DO NOTHING
+-- Note: Ignores unique constraint violations silently.
+INSERT INTO tags (name)
+VALUES ('postgresql'), ('database')
+ON CONFLICT (name) DO NOTHING;
+
+-- 5. UPSERT: ON CONFLICT DO UPDATE
+-- Note: EXCLUDED represents the row proposed for insertion.
+INSERT INTO inventory (sku, qty)
+VALUES ('PROD-001', 50)
+ON CONFLICT (sku) DO UPDATE
+SET qty = inventory.qty + EXCLUDED.qty,
+    updated_at = NOW();
+
+
 -- === CLEANUP ===
 -- DROP TABLE IF EXISTS products_backup, products_archive;
 -- DROP TABLE IF EXISTS price_updates, blacklist, products;

@@ -366,6 +366,48 @@ Practice time. Give all products a ten percent raise with RETURNING. Use UPDATE 
 
 ---
 
+
+### Answer Key — UPDATE, DELETE & UPSERT Solutions
+
+```sql
+-- 1. Give all products a 10% raise with RETURNING
+-- Note: RETURNING displays updated values immediately.
+UPDATE products
+SET price = ROUND(price * 1.10, 2)
+WHERE category = 'Electronics'
+RETURNING id, name, price AS new_price;
+
+-- 2. UPDATE FROM join syntax
+-- Note: PostgreSQL UPDATE FROM allows joining a source table cleanly.
+UPDATE products p
+SET price = s.new_price
+FROM price_staging s
+WHERE p.sku = s.sku;
+
+-- 3. DELETE with safety filter and RETURNING
+-- Note: Always double-check WHERE clauses before executing DELETE.
+DELETE FROM sessions
+WHERE last_active < NOW() - INTERVAL '30 days'
+RETURNING id, user_id;
+
+-- 4. UPSERT: ON CONFLICT DO NOTHING
+-- Note: Ignores unique constraint violations silently.
+INSERT INTO tags (name)
+VALUES ('postgresql'), ('database')
+ON CONFLICT (name) DO NOTHING;
+
+-- 5. UPSERT: ON CONFLICT DO UPDATE
+-- Note: EXCLUDED represents the row proposed for insertion.
+INSERT INTO inventory (sku, qty)
+VALUES ('PROD-001', 50)
+ON CONFLICT (sku) DO UPDATE
+SET qty = inventory.qty + EXCLUDED.qty,
+    updated_at = NOW();
+
+```
+
+---
+
 ## 7. Key Takeaways & Cheat Sheet
 
 Let's recap. UPDATE and DELETE both need WHERE — without it, you affect all rows. UPDATE FROM and DELETE USING handle join operations. RETURNING works with both to show what changed. UPSERT with ON CONFLICT handles insert-or-update in one atomic statement. EXCLUDED holds the new values. And writable CTEs chain operations atomically. Always test with SELECT first, and wrap dangerous operations in transactions.
