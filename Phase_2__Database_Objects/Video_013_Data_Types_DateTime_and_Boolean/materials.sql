@@ -174,3 +174,21 @@ SELECT NOW() AT TIME ZONE 'UTC' AS utc,
 -- =============================================
 -- Next Class: Data Types — Arrays & JSON
 -- =============================================
+
+-- === ANSWER KEY ===
+-- 1. Create bookings table with TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE bookings (id SERIAL, guest_name VARCHAR(80), check_in DATE, check_out DATE, booked_at TIMESTAMPTZ DEFAULT NOW());
+
+-- 2. Nights between check_in and check_out
+SELECT guest_name, check_out - check_in AS nights FROM bookings;
+
+-- 3. EXTRACT month & DATE_TRUNC to month
+SELECT EXTRACT(MONTH FROM check_in) AS m, DATE_TRUNC('month', check_in) AS month_start FROM bookings;
+
+-- 4. Add is_confirmed BOOLEAN & filter cleanly
+ALTER TABLE bookings ADD COLUMN is_confirmed BOOLEAN DEFAULT false;
+UPDATE bookings SET is_confirmed = true WHERE id = 1;
+SELECT * FROM bookings WHERE is_confirmed;
+
+-- 5. Compare current time across 3 timezones
+SELECT NOW() AT TIME ZONE 'UTC' AS utc, NOW() AT TIME ZONE 'Asia/Kolkata' AS ist, NOW() AT TIME ZONE 'America/New_York' AS est;

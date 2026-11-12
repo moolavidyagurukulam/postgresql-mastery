@@ -6,24 +6,66 @@
 
 ## 1. Class Overview & Real-World Context
 
-> Welcome back to PostgreSQL Mastery! In our last class, we covered numeric and text data types. Today we tackle two more essential categories ... date and time types, and the boolean type. ... Almost every application deals with dates ... when was the order placed? When does the subscription expire? How long did the task take? ... And boolean is everywhere too ... is the user active? Is the item in stock? ... Let us learn these types inside out!
+> Welcome back to PostgreSQL Mastery! In Part 1 of Data Types, we mastered numbers and text. Today in Part 2, we tackle two types that silently cause more application bugs than almost anything else: Date/Time types and Booleans!. Imagine launching an online flash sale in India where users in London and New York see orders logged 5 hours in the future or missing completely from daily reports!. By the end of this class, you will know DATE, TIME, TIMESTAMP vs TIMESTAMPTZ, how PostgreSQL stores UTC internally, INTERVAL math, AT TIME ZONE, and SQL's tricky three-valued Boolean logic (TRUE, FALSE, NULL). Let us dive in! Timezones and NULL boolean checks cause some of the sneakiest production bugs in software history, yet just three core PostgreSQL rules eliminate them permanently.
+
+### The Problem: Broken Timezones & Tricky Booleans
+Here is a classic production disaster that happens to almost every global application. Your database server runs in Virginia using Eastern Time, an API server logs orders in UTC, and a customer checks out from Mumbai. If you save order_time as a plain TIMESTAMP instead of TIMESTAMPTZ, PostgreSQL strips off the timezone! Suddenly reports say a customer bought an item five hours AFTER it shipped!. And on the boolean side, passing string yes or NULL breaks fragile filters unless you understand three-valued logic. Let us master both cleanly today. Notice how subtle timezone bugs are during testing: if your laptop and local database both share the same timezone, everything appears healthy until your first customer signs in from another continent.
+
+- Global App: Server in US-East, API in UTC, User in Mumbai (IST)
+- Mistake: Storing orders in TIMESTAMP (drops timezone context!)
+- Bug: Orders appear placed 5 hours AFTER delivery in reports
+- Solution: Always store real events in TIMESTAMPTZ (UTC under the hood)
+- Boolean Trap: TRUE vs FALSE vs NULL (Unknown) breaks WHERE checks
+- Today: Master DATE, TIME, TIMESTAMPTZ, INTERVAL & BOOLEAN
 
 
 ---
 
 ## 2. Core Technical Concepts & Mechanisms
 
+### The Problem: Broken Timezones & Tricky Booleans
+Here is a classic production disaster that happens to almost every global application. Your database server runs in Virginia using Eastern Time, an API server logs orders in UTC, and a customer checks out from Mumbai. If you save order_time as a plain TIMESTAMP instead of TIMESTAMPTZ, PostgreSQL strips off the timezone! Suddenly reports say a customer bought an item five hours AFTER it shipped!. And on the boolean side, passing string yes or NULL breaks fragile filters unless you understand three-valued logic. Let us master both cleanly today. Notice how subtle timezone bugs are during testing: if your laptop and local database both share the same timezone, everything appears healthy until your first customer signs in from another continent.
+
+- Global App: Server in US-East, API in UTC, User in Mumbai (IST)
+- Mistake: Storing orders in TIMESTAMP (drops timezone context!)
+- Bug: Orders appear placed 5 hours AFTER delivery in reports
+- Solution: Always store real events in TIMESTAMPTZ (UTC under the hood)
+- Boolean Trap: TRUE vs FALSE vs NULL (Unknown) breaks WHERE checks
+- Today: Master DATE, TIME, TIMESTAMPTZ, INTERVAL & BOOLEAN
+
 ### Date/Time Types Overview
-PostgreSQL has five date and time types. ... DATE stores just the date. Year, month, day. No time. ... TIME stores just the time. Hours, minutes, seconds. No date. ... TIMESTAMP stores both date and time together, without timezone information. ... TIMESTAMPTZ, short for TIMESTAMP WITH TIME ZONE, stores date and time AND converts to UTC for storage. This is the MOST IMPORTANT one ... always use TIMESTAMPTZ for real applications. ... INTERVAL stores a duration of time. 3 days, 2 hours, 30 minutes. Very useful for date arithmetic.
+PostgreSQL gives us five core date and time data types, each built for a clear job. DATE holds just calendar day, month, and year—ideal for birthdays or invoice due dates. TIME holds only clock time without a date—useful for store opening hours. TIMESTAMP stores date and time with NO timezone awareness; avoid it for real events. TIMESTAMPTZ stores an exact instant in UTC and converts automatically to your session timezone—this is your gold standard!. Finally, INTERVAL represents a duration, like 3 days or 2 hours 30 minutes, for clean date math. Compare those five types side by side before running queries: DATE and TIME isolate calendar or clock portions cleanly, while TIMESTAMPTZ anchors global timestamps unambiguously to coordinated UTC.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **PostgreSQL** | five date and time types |
-| **DATE** | just the date |
-| **TIME** | just the time |
-| **TIMESTAMP** | both date and time together, without timezone information |
-| **This** | the MOST IMPORTANT one |
-| **INTERVAL** | a duration of time |
+| **DATE** | Calendar date only (YYYY-MM-DD) — birthdays, holidays, due dates |
+| **TIME** | Time of day only (HH:MM:SS) — daily store opening/closing hours |
+| **TIMESTAMP** | Date + time WITHOUT timezone — avoid for multi-region events |
+| **TIMESTAMPTZ** | Stores UTC & displays in session TZ — USE THIS BY DEFAULT! |
+| **INTERVAL** | Span of time ('7 days', '2 hours') for date arithmetic |
+
+### How TIMESTAMPTZ Works Internally (DBA Secret!)
+Here is one of the biggest Aha moments in PostgreSQL: how does TIMESTAMPTZ actually work internally?. Many developers assume TIMESTAMP WITH TIME ZONE takes extra bytes to store '+05:30' next to every row. It does NOT! Both TIMESTAMP and TIMESTAMPTZ take exactly 8 bytes!. When you insert into TIMESTAMPTZ, PostgreSQL uses your session TimeZone setting to convert the moment into universal UTC and stores that exact global instant. When a colleague in London runs SELECT, PostgreSQL converts that same UTC instant to London local time!. That guarantees two servers across Mumbai and Frankfurt always agree on WHICH event happened first! Only use plain TIMESTAMP for timezone-agnostic local wall-clock rules like 'every store opens at 9:00 AM local time'.
+
+> **Definition:** Contrary to its name, TIMESTAMPTZ does NOT save the timezone name inside the row!
+
+| Term | Meaning / Explanation |
+| :--- | :--- |
+| **8-Byte Storage** | Converts input using session TimeZone and saves microseconds since 2000-01-01 UTC |
+| **Read Behavior** | On SELECT, converts UTC back into the viewer's current session TimeZone |
+| **When to Use** | Orders, logins, payments, logs — 99% of real business timestamps! |
+| **Plain TIMESTAMP** | Only for wall-clock schedules ('9 AM store open anywhere') without UTC conversion |
+
+### Boolean Three-Valued Logic (TRUE, FALSE, NULL Trap!)
+Before wrapping up Booleans, memorize this table, it prevents silent bugs in customer filters everywhere!. Remember a PostgreSQL BOOLEAN column has THREE possible states: TRUE, FALSE, and NULL (unknown). Suppose you want every user who is NOT active, including legacy imported rows where is_active was left NULL. If you write WHERE is_active <> true or WHERE NOT is_active, SQL treats NULL <> true as NULL, NOT TRUE, so those NULL users silently disappear!. Always use IS NOT TRUE, IS FALSE, or IS DISTINCT FROM true whenever a nullable boolean column participates in a negative filter! Bookmark this three-valued truth table carefully! Comparing NULL with standard equals or not-equals ALWAYS yields UNKNOWN, never true — which is why IS NULL and IS NOT TRUE exist in SQL.
+
+| Filter Query | is_active = TRUE | is_active = FALSE | is_active IS NULL |
+| :--- | :--- | :--- | :--- |
+| WHERE is_active | INCLUDED | Excluded | Excluded |
+| WHERE NOT is_active | Excluded | INCLUDED | Excluded |
+| WHERE is_active <> true | Excluded | INCLUDED | Excluded (TRAP!) |
+| WHERE is_active IS NOT TRUE | Excluded | INCLUDED | INCLUDED (Safe!) |
+| WHERE is_active IS DISTINCT FROM true | Excluded | INCLUDED | INCLUDED (Standard!) |
 
 
 ---
@@ -31,7 +73,7 @@ PostgreSQL has five date and time types. ... DATE stores just the date. Year, mo
 ## 3. Hands-On Commands & psql Output
 
 ### DATE Type — Date Only
-**Explanation:** Let me demonstrate the DATE type first. ... You can insert dates in several formats. The ISO format year dash month dash day is the safest and recommended. ... PostgreSQL also gives you useful functions. CURRENT_DATE returns today's date. You can subtract dates to get the number of days between them. You can add intervals to dates.
+**Explanation:** Let us begin with the DATE type, which stores a calendar year, month, and day in just 4 bytes with zero clock time attached. Think of birthdays, public holidays, hire dates, and invoice due dates. Always write date literals using the ISO 8601 format, YYYY dash MM dash DD, such as 2026-12-15. Why is that critical? Because 03/04/2026 means March 4th in the US and April 3rd in India or Europe, causing silent data corruption when teams collaborate globally! Notice also two super handy tricks: CURRENT_DATE fetches today's date immediately, and subtracting one DATE from another returns an exact integer count of days! Checking date subtraction right in SQL also keeps SLA countdowns, age validations, and invoice due-date alerts rock solid without brittle date-library dependencies in every service.
 
 ```sql
 practice=# CREATE TABLE events (id SERIAL, name VARCHAR(100), event_date DATE);
@@ -57,7 +99,7 @@ practice=# SELECT '2026-11-03'::DATE + INTERVAL '30 days' AS future_date;
 ```
 
 ### TIMESTAMP vs TIMESTAMPTZ
-**Explanation:** Now TIMESTAMP and TIMESTAMPTZ. ... TIMESTAMP stores date and time without any timezone awareness. Whatever you insert is stored as-is. ... TIMESTAMPTZ is timezone-aware. PostgreSQL converts the value to UTC for storage, and converts it back to your session timezone when you query it. ... This is critical. If your users are in different timezones, TIMESTAMPTZ handles it correctly. TIMESTAMP does not. ... Always prefer TIMESTAMPTZ for real applications. Use plain TIMESTAMP only when timezone does not matter, like for log entries on a single-timezone system.
+**Explanation:** Now compare TIMESTAMP versus TIMESTAMPTZ in live psql queries, because this trips up more engineers than almost anything else in PostgreSQL! Plain TIMESTAMP without timezone ignores where on Earth the event happened: if you insert 14:30, PostgreSQL simply stores 14:30 forever, no matter which timezone queries it later. TIMESTAMPTZ, short for timestamp with time zone, converts your input to coordinated UTC on disk, then translates it automatically into each viewer's local session TimeZone on SELECT! When our Asia Kolkata session sees 20:00:00+05:30 and New York switches timezone and reads 09:30:00-05:00, both see the exact same real-world instant cleanly. Seeing 20:00 in Asia Kolkata and 09:30 in America New York prove the exact same instant makes TIMESTAMPTZ click permanently for every developer.
 
 ```sql
 -- TIMESTAMP: no timezone awareness
@@ -85,7 +127,7 @@ practice=# SELECT NOW();
 ```
 
 ### AT TIME ZONE — Convert Between Timezones
-**Explanation:** The AT TIME ZONE expression lets you convert between timezones. ... SELECT NOW AT TIME ZONE UTC shows the current time in UTC. ... SELECT a timestamp AT TIME ZONE Asia slash Kolkata converts it to Indian Standard Time. ... This is extremely useful when you need to display times in different timezones for users around the world.
+**Explanation:** Even when you store every order or login safely in TIMESTAMPTZ, reporting dashboards often need to display one fixed instant across multiple regional offices inside the very same SQL query. That is where AT TIME ZONE shines! Start in UTC where NOW reads 14:30 UTC. Simply run NOW AT TIME ZONE 'Asia/Kolkata' to see 20:00 Indian time, or AT TIME ZONE 'Asia/Tokyo' to see 23:30 Japan time! One subtle detail worth remembering: AT TIME ZONE on a TIMESTAMPTZ strips the offset display and returns a plain TIMESTAMP localized to that requested city, ready for charts or PDF invoices.
 
 ```sql
 practice=# SET timezone = 'UTC';
@@ -111,7 +153,7 @@ practice=# SELECT NOW() AT TIME ZONE 'Asia/Tokyo' AS tokyo_time;
 ```
 
 ### INTERVAL — Duration of Time
-**Explanation:** INTERVAL is a very useful type. It represents a duration ... a span of time. ... You can write intervals in natural language. INTERVAL 3 days. INTERVAL 2 hours 30 minutes. INTERVAL 1 year 6 months. ... Intervals are great for date arithmetic. Add an interval to a timestamp to get a future date. Subtract to get a past date. ... You can also subtract two timestamps to get an interval automatically.
+**Explanation:** Now meet INTERVAL, one of PostgreSQL's cleanest superpowers for representing an elapsed span or duration of time like '3 days', '2 hours 30 minutes', or '1 year 6 months'! Instead of converting durations into fragile seconds in application code and breaking on daylight saving changes or 28-day versus 31-day months, PostgreSQL handles calendar math natively! Look how readable your SQL becomes: CURRENT_DATE plus INTERVAL '90 days' calculates a contract deadline cleanly across year boundaries, and subtracting two TIMESTAMPTZ timestamps directly returns an exact human-readable INTERVAL telling you how many days or hours elapsed. You can also combine units cleanly inside one interval literal, such as '1 year 2 months 3 days', making contract renewals and trial extensions readable to anyone maintaining your query.
 
 ```sql
 -- Interval examples
@@ -138,36 +180,51 @@ practice=# SELECT '2026-12-31'::TIMESTAMP - '2026-11-03'::TIMESTAMP AS duration;
  58 days
 ```
 
+### Real Business SQL: Expiry Checks & Monthly Grouping
+**Explanation:** Watch how INTERVAL, AGE, and DATE_TRUNC solve three real business tasks in one clean SQL line each! Task one: calculating a 30-day free trial renewal or SLA deadline simply takes CURRENT_DATE plus INTERVAL '30 days'. Task two: building an HR employee tenure report showing exact years, months, and days simply passes end date and start date into AGE, returning '2 years 9 mons 16 days' cleanly! Task three: when finance wants monthly revenue charts, DATE_TRUNC('month', ordered_at) resets every order timestamp in that month down to the first day at midnight so GROUP BY works cleanly without slow substring hacks!
+
+```sql
+-- Subscription expiring in 7 days (clean INTERVAL arithmetic)
+practice=# SELECT CURRENT_DATE + INTERVAL '30 days' AS renewal_date;
+    renewal_date
+---------------------
+ 2026-12-12 00:00:00
+
+-- Human-readable age / tenure between two dates
+practice=# SELECT AGE('2026-12-31'::DATE, '2024-03-15'::DATE) AS tenure;
+       tenure
+---------------------
+ 2 years 9 mons 16 days
+
+-- Group orders into clean monthly buckets with DATE_TRUNC
+practice=# SELECT DATE_TRUNC('month', '2026-11-12 14:30:00+05:30'::TIMESTAMPTZ) AS billing_month;
+ 2026-11-01 00:00:00+05:30
+```
+
 ### Useful Date/Time Functions
-**Explanation:** PostgreSQL has many useful date and time functions. ... CURRENT_DATE gives today's date. NOW or CURRENT_TIMESTAMP gives the current date and time with timezone. ... EXTRACT pulls a specific part from a date ... year, month, day, hour, minute. ... DATE_TRUNC truncates a timestamp to a specific precision ... useful for grouping by month or year. ... AGE calculates the difference between two dates in a human-readable format.
+**Explanation:** Let us put our everyday Date and Time functions side by side right inside psql so you see their exact outputs! First, CURRENT_DATE returns today's calendar date, whereas NOW returns the exact TIMESTAMPTZ when the current transaction began, which guarantees all rows inserted inside one transaction share an identical timestamp. Second, EXTRACT pulls individual numeric components like YEAR 2026 or MONTH 11 (or DOW for day of week from Sunday zero through Saturday six) for analytics filters. Third, DATE_TRUNC rounds any timestamp down cleanly to hour, day, week, or month boundaries for clean SQL aggregation.
 
 ```sql
 practice=# SELECT CURRENT_DATE AS today, NOW() AS right_now;
-    today    |           right_now
-------------+-------------------------------
- 2026-11-03 | 2026-11-03 14:30:00.000+00:00
+   today    |          right_now
+------------+------------------------------
+ 2026-11-03 | 2026-11-03 14:30:00.00+00
 
--- EXTRACT: pull parts from a date
-practice=# SELECT EXTRACT(YEAR FROM CURRENT_DATE) AS yr, EXTRACT(MONTH FROM CURRENT_DATE) AS mo, EXTRACT(DOW FROM CURRENT_DATE) AS day_of_week;
-  yr  | mo | day_of_week
-------+----+-------------
- 2026 | 11 |           2
+-- EXTRACT: pull year, month, day-of-week (0=Sun..6=Sat)
+practice=# SELECT EXTRACT(YEAR FROM CURRENT_DATE) AS yr, EXTRACT(MONTH FROM CURRENT_DATE) AS mo;
+  yr  | mo
+------+----
+ 2026 | 11
 
--- DATE_TRUNC: truncate to month/year
+-- DATE_TRUNC: bucket timestamps to month/day/hour
 practice=# SELECT DATE_TRUNC('month', NOW()) AS month_start;
-       month_start
+      month_start
 ------------------------
  2026-11-01 00:00:00+00
-
--- AGE: human-readable difference
-practice=# SELECT AGE('2026-11-03'::DATE, '1995-06-15'::DATE) AS age;
-          age
-------------------------
- 31 years 4 mons 18 days
 ```
 
 ### BOOLEAN Type — TRUE, FALSE, NULL
-**Explanation:** The BOOLEAN type is simple but powerful. It stores one of three values: TRUE, FALSE, or NULL. ... TRUE can be written as TRUE, t, yes, y, on, or 1. FALSE can be written as FALSE, f, no, n, off, or 0. ... But the recommended way is to use TRUE and FALSE keywords. ... Boolean columns are perfect for flags. is_active, is_verified, in_stock, is_published. ... In WHERE clauses, you do not need to write WHERE is_active equals TRUE. Just write WHERE is_active. PostgreSQL understands it.
+**Explanation:** The BOOLEAN type stores a simple true-or-false flag in just 1 byte, plus optional NULL for unknown. It is ideal for status flags like is_active, is_verified, in_stock, or email_opt_in. Notice PostgreSQL accepts flexible inputs like true, t, yes, on, or 1 on input, and displays compact t or f in psql tables, though writing explicit keywords TRUE and FALSE keeps your SQL portable and readable. Even cleaner, inside WHERE clauses you never need clunky equals TRUE comparisons: simply write WHERE is_active for active users, or WHERE NOT is_active to filter disabled accounts! Using clear positive column names like is_active, is_verified, and has_paid makes boolean queries read almost like plain English sentences inside every SQL report.
 
 ```sql
 practice=# CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(100), is_active BOOLEAN DEFAULT true, is_verified BOOLEAN DEFAULT false);
@@ -191,7 +248,7 @@ practice=# SELECT * FROM users WHERE NOT is_active;
 ```
 
 ### Boolean Gotchas
-**Explanation:** A common mistake with boolean. ... Some beginners try to insert the string yes into a boolean column. This gives an error: invalid input syntax for type boolean. Use TRUE or FALSE, not yes or no as strings. ... Another gotcha ... boolean can be NULL. A NULL boolean is neither true nor false. It is unknown. WHERE is_active will not return NULL rows. If you need to include them, use WHERE is_active IS NOT FALSE or WHERE is_active IS NULL.
+**Explanation:** Watch out for two real production boolean traps that catch beginners off guard! First, 'yes' only works inside string literals cast carefully when valid, whereas garbage text like 'maybe' or invalid tokens triggers an immediate invalid input syntax error, and integers cannot implicitly cast without explicit SQL rules. Stick strictly to unquoted TRUE and FALSE. Second and most dangerous is three-valued logic with NULL! Look back at the truth table: WHERE NOT is_active and WHERE is_active not-equal true BOTH silently exclude NULL rows! If you want every user who is either FALSE or NULL, always write WHERE is_active IS NOT TRUE or WHERE is_active IS DISTINCT FROM true.
 
 ```sql
 -- ERROR: 'yes' is NOT a valid boolean value
@@ -215,7 +272,7 @@ practice=# SELECT name, is_active FROM users WHERE is_active IS NULL;
 ```
 
 ### Common Errors
-**Explanation:** Common date, time, and boolean errors. ... Error 1: date field value out of range. You used a wrong date format like month slash day slash year. Always use ISO format: year dash month dash day. ... Error 2: invalid input syntax for type boolean. You tried yes or 1 as a string. Use TRUE or FALSE. ... Error 3: timezone confusion. If you store timestamps without timezone and your server changes timezone, all your times are wrong. Always use TIMESTAMPTZ.
+**Explanation:** Here are the three date, time, and boolean errors you are most likely to hit in daily work, along with their instant fixes. Error one: date/time field value out of range, like passing '13/32/2026'. Always standardize inputs to ISO YYYY dash MM dash DD before casting. Error two: invalid input syntax for type boolean when invalid strings sneak into ETL scripts. Standardize flags to true or false, or use NULLIF. Error three: silent timezone drift from choosing plain TIMESTAMP for global events. Always default to TIMESTAMPTZ unless storing a timezone-free schedule like store opening at 9 AM local time.
 
 ```sql
 -- ERROR: date format wrong
@@ -238,8 +295,11 @@ ERROR:  invalid input syntax for type boolean: "yes"
 
 ## 5. Common Beginner Traps & How to Fix Them
 
+### Boolean Three-Valued Logic (TRUE, FALSE, NULL Trap!)
+Before wrapping up Booleans, memorize this table, it prevents silent bugs in customer filters everywhere!. Remember a PostgreSQL BOOLEAN column has THREE possible states: TRUE, FALSE, and NULL (unknown). Suppose you want every user who is NOT active, including legacy imported rows where is_active was left NULL. If you write WHERE is_active <> true or WHERE NOT is_active, SQL treats NULL <> true as NULL, NOT TRUE, so those NULL users silently disappear!. Always use IS NOT TRUE, IS FALSE, or IS DISTINCT FROM true whenever a nullable boolean column participates in a negative filter! Bookmark this three-valued truth table carefully! Comparing NULL with standard equals or not-equals ALWAYS yields UNKNOWN, never true — which is why IS NULL and IS NOT TRUE exist in SQL.
+
 ### Common Errors
-Common date, time, and boolean errors. ... Error 1: date field value out of range. You used a wrong date format like month slash day slash year. Always use ISO format: year dash month dash day. ... Error 2: invalid input syntax for type boolean. You tried yes or 1 as a string. Use TRUE or FALSE. ... Error 3: timezone confusion. If you store timestamps without timezone and your server changes timezone, all your times are wrong. Always use TIMESTAMPTZ.
+Here are the three date, time, and boolean errors you are most likely to hit in daily work, along with their instant fixes. Error one: date/time field value out of range, like passing '13/32/2026'. Always standardize inputs to ISO YYYY dash MM dash DD before casting. Error two: invalid input syntax for type boolean when invalid strings sneak into ETL scripts. Standardize flags to true or false, or use NULLIF. Error three: silent timezone drift from choosing plain TIMESTAMP for global events. Always default to TIMESTAMPTZ unless storing a timezone-free schedule like store opening at 9 AM local time.
 
 ```sql
 -- ERROR: date format wrong
@@ -262,7 +322,7 @@ ERROR:  invalid input syntax for type boolean: "yes"
 
 ## 6. Hands-On Practice Exercises (Try It Yourself!)
 
-Practice time! ... Exercise 1 ... Create a table called bookings with: id SERIAL, guest_name VARCHAR, check_in DATE, check_out DATE, booked_at TIMESTAMPTZ DEFAULT NOW. Insert 2 bookings. ... Exercise 2 ... Calculate the number of days between check_in and check_out. ... Exercise 3 ... Use EXTRACT to get the month from the check_in dates. Use DATE_TRUNC to truncate to month. ... Exercise 4 ... Add a column is_confirmed BOOLEAN DEFAULT false. Update one booking to confirmed. Query only confirmed bookings. ... Exercise 5 ... Display the current time in three different timezones using AT TIME ZONE.
+Practice time!. Exercise 1. Create a table called bookings with: id SERIAL, guest_name VARCHAR, check_in DATE, check_out DATE, booked_at TIMESTAMPTZ DEFAULT NOW. Insert 2 bookings. Exercise 2. Calculate the number of days between check_in and check_out. Exercise 3. Use EXTRACT to get the month from the check_in dates. Use DATE_TRUNC to truncate to month. Exercise 4. Add a column is_confirmed BOOLEAN DEFAULT false. Update one booking to confirmed. Query only confirmed bookings. Exercise 5. Display the current time in three different timezones using AT TIME ZONE. Spend ten minutes typing all five booking exercises yourself inside psql so AT TIME ZONE, DATE_TRUNC, and boolean filters become completely effortless.
 
 1. Exercise 1: CREATE TABLE bookings (DATE, TIMESTAMPTZ) → INSERT 2
 2. Exercise 2: Calculate days between check_in and check_out
@@ -273,9 +333,33 @@ Practice time! ... Exercise 1 ... Create a table called bookings with: id SERIAL
 
 ---
 
+
+### Answer Key — Practice Solutions
+
+```sql
+-- 1. Create bookings table with TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE bookings (id SERIAL, guest_name VARCHAR(80), check_in DATE, check_out DATE, booked_at TIMESTAMPTZ DEFAULT NOW());
+
+-- 2. Nights between check_in and check_out
+SELECT guest_name, check_out - check_in AS nights FROM bookings;
+
+-- 3. EXTRACT month & DATE_TRUNC to month
+SELECT EXTRACT(MONTH FROM check_in) AS m, DATE_TRUNC('month', check_in) AS month_start FROM bookings;
+
+-- 4. Add is_confirmed BOOLEAN & filter cleanly
+ALTER TABLE bookings ADD COLUMN is_confirmed BOOLEAN DEFAULT false;
+UPDATE bookings SET is_confirmed = true WHERE id = 1;
+SELECT * FROM bookings WHERE is_confirmed;
+
+-- 5. Compare current time across 3 timezones
+SELECT NOW() AT TIME ZONE 'UTC' AS utc, NOW() AT TIME ZONE 'Asia/Kolkata' AS ist, NOW() AT TIME ZONE 'America/New_York' AS est;
+```
+
+---
+
 ## 7. Key Takeaways & Cheat Sheet
 
-Let us summarize. ... DATE for dates, TIME for times, TIMESTAMP for both. Always prefer TIMESTAMPTZ over plain TIMESTAMP for timezone safety. ... INTERVAL for durations and date arithmetic. ... Useful functions: CURRENT_DATE, NOW, EXTRACT, DATE_TRUNC, AGE, AT TIME ZONE. ... BOOLEAN stores TRUE, FALSE, or NULL. Use TRUE and FALSE, not strings. In WHERE, just write WHERE is_active, not WHERE is_active equals TRUE. ... Always use ISO date format: year dash month dash day. ... In our next class, we cover Arrays and JSON data types!
+Let us wrap up Class 13 cleanly! Use DATE for calendar days, TIME for clock times without dates, and always prefer TIMESTAMPTZ over plain TIMESTAMP so global user timezones stay rock-solid in UTC under the hood. Use INTERVAL for clean calendar durations like '30 days', pair NOW and CURRENT_DATE with EXTRACT, DATE_TRUNC, AGE, and AT TIME ZONE for reporting, and remember three-valued BOOLEAN logic where IS NOT TRUE handles NULLs safely. Always write dates in ISO format YYYY dash MM dash DD! Next up in Class 14, Arrays and JSONB.
 
 - **DATE (date only), TIME (time only), TIMESTAMP (both)**
 - **ALWAYS use TIMESTAMPTZ — not TIMESTAMP — for timezone safety**
