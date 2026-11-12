@@ -167,3 +167,35 @@ DROP SCHEMA IF EXISTS sales CASCADE;
 -- =============================================
 -- Next Class: Tablespaces
 -- =============================================
+
+
+-- === ANSWER KEY ===
+
+-- Answer 1:
+CREATE SCHEMA app;
+CREATE SCHEMA analytics;
+CREATE SCHEMA staging;
+-- \dn
+
+-- Answer 2:
+CREATE TABLE app.customers (
+    id    SERIAL PRIMARY KEY,
+    name  VARCHAR(100),
+    email VARCHAR(150)
+);
+INSERT INTO app.customers (name, email) VALUES
+    ('Ravi', 'ravi@example.com'),
+    ('Priya', 'priya@example.com');
+SELECT * FROM app.customers;
+
+-- Answer 3:
+SET search_path TO app, public;
+SELECT * FROM customers;
+
+-- Answer 4:
+ALTER TABLE app.customers SET SCHEMA analytics;
+-- \dt analytics.*
+
+-- Answer 5:
+DROP SCHEMA app, analytics, staging CASCADE;
+-- \dn
