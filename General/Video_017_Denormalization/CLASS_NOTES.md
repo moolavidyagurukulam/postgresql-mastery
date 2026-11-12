@@ -27,7 +27,7 @@ Imagine an e-commerce dashboard. Your data is perfectly normalized across four t
 | **Result** | 100,000 orders × 4 JOINs = slow page load for users |
 
 ### What Is Denormalization?
-Denormalization means intentionally adding redundancy back into your tables to speed up read queries. The key word is intentionally. You know the normalization rules, you understand the trade-offs, and you break them on purpose for performance. It's not being lazy — it's being strategic.
+Think of normalization versus denormalization like a supermarket warehouse versus the express checkout counter! ... The warehouse organizes every product neatly into separate aisles (normalized—zero duplicates). The express counter puts best-selling batteries right beside the register for fast grabs (denormalized—a smart shortcut on purpose!). ... Denormalization means intentionally copying a little data for read speed, ONLY AFTER you build a clean normalized foundation.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
@@ -37,13 +37,14 @@ Denormalization means intentionally adding redundancy back into your tables to s
 | **When** | Read-heavy workloads where JOIN performance is a bottleneck |
 
 ### When to Denormalize — Decision Framework
-Here's your decision framework. If you keep joining the same columns, add redundant columns. If dashboards need aggregates, use summary tables. If reports run complex queries, materialized views are your friend. But if the workload is write-heavy, stay normalized — redundancy causes update bugs. And if your dataset is small, JOINs are fast enough. Don't denormalize prematurely.
+So when should you actually denormalize versus keep tables cleanly normalized? Use this quick checklist before adding duplicate columns. ... If one hot screen repeats the same customer name JOIN millions of times, copying customer_name can help. ... If executive dashboards run heavy SUM or COUNT queries, use a daily summary table or even safer—a Materialized View! ... When NOT to denormalize: if your app is write-heavy or your tables have under a hundred thousand rows, regular indexed JOINs are already milliseconds fast.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **If reports** | complex queries, materialized views are your friend |
-| **But if the workload** | write-heavy, stay normalized — redundancy causes update bugs |
-| **And if your dataset** | small, JOINs are fast enough |
+| **Redundant Cols** | Copy 1–2 heavily joined fields onto huge read-hot tables |
+| **Summary Tables** | Pre-compute daily/monthly revenue totals instead of scanning rows |
+| **Mat. Views** | Safest option — fast snapshots while base tables stay 3NF clean |
+| **Stay 3NF When** | Write-heavy OLTP apps or small/medium datasets (<100K rows) |
 
 ### Normalization vs Denormalization Trade-offs
 Here's the full picture. Normalized is the default — no redundancy, clean operations, smaller storage, but needs JOINs. Denormalized is strategic — faster reads, fewer JOINs, but updates are harder and storage is larger. OLTP systems that process many small transactions stay normalized. OLAP systems that run big analytical queries denormalize. Most real applications use both — normalized core tables with denormalized views for dashboards.
@@ -158,7 +159,7 @@ ORDER BY order_date DESC LIMIT 50;
 ```
 
 ### Refreshing Materialized Views
-**Explanation:** To update the materialized view, you run REFRESH MATERIALIZED VIEW. But plain refresh locks the view — nobody can read it while it refreshes. The solution is CONCURRENTLY. Add a unique index on the view, then refresh concurrently. Reads continue uninterrupted while the data updates in the background. This is how production systems handle it.
+**Explanation:** To update a materialized view with fresh order numbers, run REFRESH MATERIALIZED VIEW. ... Here is the beginner trap: plain REFRESH grabs an exclusive table lock, freezing your live dashboard for every user until it finishes! ... Instead, add one UNIQUE index on the view first, then run REFRESH MATERIALIZED VIEW CONCURRENTLY. PostgreSQL quietly builds the updated snapshot behind the scenes while customers keep reading nonstop.
 
 ```sql
 -- Refresh: re-runs the query, updates stored data

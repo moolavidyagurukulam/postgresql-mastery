@@ -31,26 +31,25 @@ Here's the problem. Without naming rules, every developer picks their own style.
 - Six months later, nobody knows what anything is called
 
 ### Rule 1: Use snake_case for Everything
-Rule one — use snake case for everything. Tables, columns, indexes, constraints — all lowercase with underscores. Why? Because PostgreSQL automatically lowercases all unquoted identifiers. If you write UserAccounts without quotes, PostgreSQL stores it as useraccounts. If you use double quotes, you must quote it every single time forever. Snake case avoids all of this pain.
+Rule number one in PostgreSQL naming: always use lowercase snake_case with underscores—like order_items and created_at. ... Why does this matter so much in PostgreSQL? Because PostgreSQL automatically folds every unquoted name to lowercase! If you write UserAccounts without quotes, PostgreSQL quietly stores useraccounts as one unreadable word. And if you wrap it in double quotes to preserve capitals, every developer must type quotes in every query forever!
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **Rule one** | use snake case for everything |
-| **Tables, columns** | indexes, constraints — all lowercase with underscores |
-| **Point 3** | Because PostgreSQL automatically lowercases all unquoted identifiers |
-| **If you write UserAccounts without quotes** | PostgreSQL stores it as useraccounts |
-| **If you use double quotes** | you must quote it every single time forever |
-| **Point 6** | Snake case avoids all of this pain |
+| **Standard** | Use all lowercase_with_underscores for tables, columns & indexes |
+| **PG Folding** | Unquoted UserAccounts becomes useraccounts inside PostgreSQL |
+| **Quote Trap** | Using "UserAccounts" forces double quotes on every query forever |
+| **Benefit** | snake_case stays 100% predictable across SQL tools & ORMs |
 
 ### Naming Convention Rules
 Here are the full naming conventions. Tables are plural snake case — users, order items, products. Columns are singular — first name, email, created at. Primary keys are just id or table underscore id. Foreign keys reference the other table — customer id, product id. Indexes start with idx, constraints with their type — pk for primary key, uq for unique, ck for check.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **Here** | the full naming conventions |
-| **Tables** | plural snake case — users, order items, products |
-| **Columns** | singular — first name, email, created at |
-| **Primary keys** | just id or table underscore id |
+| **Tables** | Plural lowercase snake_case: users, order_items, products |
+| **Columns** | Singular lowercase snake_case: first_name, email, created_at |
+| **Primary Key** | Just id (or table_id): id INT GENERATED ALWAYS AS IDENTITY |
+| **Foreign Key** | Singular referenced table + _id: customer_id, product_id |
+| **Constraints** | Prefix clearly: idx_, pk_, fk_, uq_, ck_ for instant debugging |
 
 ### Good vs Bad Naming
 Good versus bad naming. Bad names include meaningless prefixes like tbl underscore usr, vague names like data or info, single letters, overly long names, and cryptic abbreviations. Also avoid reserved words like type, order, or user as bare column names. Good names are clear, specific nouns with full words. They describe exactly what the table or column contains.
@@ -111,18 +110,15 @@ This is the star schema — the standard OLAP design. In the center is the fact 
 ```
 
 ### OLTP vs OLAP — Side by Side
-Here's the full comparison. OLTP runs the business — customers and employees doing transactions. OLAP analyzes the business — analysts and managers running reports. OLTP uses simple queries on few rows with normalized design. OLAP uses complex queries on millions of rows with denormalized star schemas. OLTP prioritizes writes and integrity. OLAP prioritizes reads and aggregation. Most companies have both — OLTP for the application, OLAP for the data warehouse.
+Let us compare OLTP and OLAP cleanly side by side so you know where and when each design wins. ... Think of OLTP like the cash register at a busy store—thousands of fast single-customer checkouts per second, strictly normalized in 3NF so money never gets lost. ... Think of OLAP like the annual corporate boardroom report—reading millions of historical sales rows with SUM and GROUP BY from a star schema. ... Most real companies run OLTP PostgreSQL for their live app, then sync nightly data into an OLAP warehouse for dashboards.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **Point 1** | Here's the full comparison |
-| **OLTP runs the business** | customers and employees doing transactions |
-| **OLAP analyzes the business** | analysts and managers running reports |
-| **Point 4** | OLTP uses simple queries on few rows with normalized design |
-| **Point 5** | OLAP uses complex queries on millions of rows with denormalized star schemas |
-| **Point 6** | OLTP prioritizes writes and integrity |
-| **Point 7** | OLAP prioritizes reads and aggregation |
-| **Most companies have both** | OLTP for the application, OLAP for the data warehouse |
+| **OLTP Goal** | Run live business — thousands of tiny fast INSERT/UPDATE/DELETE ops |
+| **OLAP Goal** | Analyze history — complex SUM, AVG, GROUP BY reports over years |
+| **Schema Shape** | OLTP: normalized 3NF tables | OLAP: denormalized Star Schema |
+| **Top Priority** | OLTP: ACID integrity & fast writes | OLAP: fast analytical reads |
+| **Real Setup** | Run live app on OLTP; sync copies into OLAP for BI dashboards |
 
 
 ---
@@ -218,6 +214,39 @@ Here are the best practices. Always define a primary key. Use appropriate data t
 8. Add created_at and updated_at TIMESTAMPTZ columns to every table
 9. Document your schema — add COMMENT ON TABLE and COMMENT ON COLUMN
 
+
+---
+
+
+### Answer Key — Database Design Best Practices
+
+```sql
+-- 1. Production table with identity PK and timestamps
+-- Note: Always use snake_case, plural table names, and TIMESTAMPTZ.
+CREATE TABLE customers (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, email TEXT NOT NULL UNIQUE, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+
+-- 2. Foreign key reference with clean naming
+-- Note: FK column named singular referenced_table_id.
+CREATE TABLE orders (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, customer_id BIGINT NOT NULL REFERENCES customers(id), order_total NUMERIC(10,2) NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW());
+
+-- 3. Document schema with comments
+-- Note: Comments persist inside PostgreSQL catalogs for team visibility.
+COMMENT ON TABLE customers IS 'Master record for registered store customers';
+COMMENT ON COLUMN customers.email IS 'User primary login and verified email';
+
+-- 4. OLAP Star Schema aggregate query
+-- Note: Star schemas optimize read queries over millions of rows.
+SELECT d.year, p.category, SUM(f.revenue) AS total_revenue
+FROM fact_sales f
+JOIN dim_date d ON f.date_key = d.date_key
+JOIN dim_products p ON f.product_key = p.product_key
+GROUP BY d.year, p.category ORDER BY total_revenue DESC;
+
+-- 5. Fixing the EAV Anti-Pattern
+-- Note: Typed columns outperform Entity-Attribute-Value anti-patterns.
+CREATE TABLE user_settings (user_id BIGINT PRIMARY KEY REFERENCES users(id), theme TEXT DEFAULT 'dark', email_notifications BOOLEAN DEFAULT true, timezone TEXT DEFAULT 'UTC');
+
+```
 
 ---
 

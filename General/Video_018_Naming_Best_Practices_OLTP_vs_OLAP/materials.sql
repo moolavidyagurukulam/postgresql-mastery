@@ -313,6 +313,36 @@ ORDER BY revenue DESC;
 -- );
 -- Answer: EAV pattern! Use proper typed columns instead.
 
+
+-- =============================================
+-- ANSWER KEY — DATABASE DESIGN BEST PRACTICES
+-- =============================================
+-- 1. Production table with identity PK and timestamps
+-- Note: Always use snake_case, plural table names, and TIMESTAMPTZ.
+CREATE TABLE customers (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, email TEXT NOT NULL UNIQUE, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+
+-- 2. Foreign key reference with clean naming
+-- Note: FK column named singular referenced_table_id.
+CREATE TABLE orders (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, customer_id BIGINT NOT NULL REFERENCES customers(id), order_total NUMERIC(10,2) NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW());
+
+-- 3. Document schema with comments
+-- Note: Comments persist inside PostgreSQL catalogs for team visibility.
+COMMENT ON TABLE customers IS 'Master record for registered store customers';
+COMMENT ON COLUMN customers.email IS 'User primary login and verified email';
+
+-- 4. OLAP Star Schema aggregate query
+-- Note: Star schemas optimize read queries over millions of rows.
+SELECT d.year, p.category, SUM(f.revenue) AS total_revenue
+FROM fact_sales f
+JOIN dim_date d ON f.date_key = d.date_key
+JOIN dim_products p ON f.product_key = p.product_key
+GROUP BY d.year, p.category ORDER BY total_revenue DESC;
+
+-- 5. Fixing the EAV Anti-Pattern
+-- Note: Typed columns outperform Entity-Attribute-Value anti-patterns.
+CREATE TABLE user_settings (user_id BIGINT PRIMARY KEY REFERENCES users(id), theme TEXT DEFAULT 'dark', email_notifications BOOLEAN DEFAULT true, timezone TEXT DEFAULT 'UTC');
+
+
 -- === CLEANUP ===
 -- DROP TABLE IF EXISTS fact_sales, dim_customers, dim_products, dim_date, dim_stores;
 -- DROP TABLE IF EXISTS orders, users, events, events_bad, user_attributes_bad;
