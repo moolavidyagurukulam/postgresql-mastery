@@ -301,6 +301,45 @@ VALUES ('Dr. Shah', '[2026-11-03 14:00, 2026-11-03 14:30)', 'Ravi');
 INSERT INTO doctor_appointments (doctor, slot, patient)
 VALUES ('Dr. Kumar', '[2026-11-03 14:15, 2026-11-03 14:45)', 'Priya');
 
+
+-- =============================================
+-- ANSWER KEY — CONSTRAINTS SOLUTIONS
+-- =============================================
+-- 1. Table with PRIMARY KEY, UNIQUE, and CHECK constraints
+-- Note: Named constraints make error debugging much easier.
+CREATE TABLE team_members (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    age INT CHECK (age BETWEEN 18 AND 70),
+    role VARCHAR(30) DEFAULT 'Developer'
+);
+
+-- 2. FOREIGN KEY with ON DELETE CASCADE and SET NULL
+-- Note: CASCADE deletes children; SET NULL clears reference.
+CREATE TABLE projects (id SERIAL PRIMARY KEY, lead_id INT REFERENCES team_members(id) ON DELETE SET NULL);
+CREATE TABLE tasks (id SERIAL PRIMARY KEY, project_id INT REFERENCES projects(id) ON DELETE CASCADE);
+
+-- 3. EXCLUDE constraint preventing overlapping room bookings
+-- Note: Requires btree_gist extension for scalar + range exclusion.
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE TABLE room_bookings (
+    room_id INT,
+    during TSTZRANGE,
+    EXCLUDE USING GIST (room_id WITH =, during WITH &&)
+);
+
+-- 4. ALTER TABLE ADD and DROP constraint
+-- Note: Always name constraints explicitly for simple alteration.
+ALTER TABLE team_members ADD CONSTRAINT ck_min_age CHECK (age >= 18);
+ALTER TABLE team_members DROP CONSTRAINT ck_min_age;
+
+-- 5. Checking constraint violations in psql
+-- Note: Familiarize yourself with exact error strings.
+INSERT INTO team_members (email, age) VALUES ('test@co.com', 15); -- triggers check constraint
+INSERT INTO team_members (email, age) VALUES ('test@co.com', 25); -- succeeds
+INSERT INTO team_members (email, age) VALUES ('test@co.com', 25); -- triggers unique constraint
+
+
 -- === CLEANUP ===
 -- DROP TABLE IF EXISTS assignments, students;
 -- DROP TABLE IF EXISTS doctor_appointments, room_bookings;

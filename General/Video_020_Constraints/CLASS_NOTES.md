@@ -28,15 +28,15 @@ Without constraints, your database accepts anything. No primary key means duplic
 | **No NOT NULL** | Required fields left blank — broken application logic |
 
 ### Constraint Naming Conventions
-Always name your constraints. The naming convention is: type prefix, underscore, table name, underscore, column or description. Primary key is pk, unique is uq, check is ck, foreign key is fk, exclude is excl. Named constraints make error messages readable and make it easy to alter or drop them later. NOT NULL is the exception — it doesn't get a name.
+Here is a senior DBA habit that saves hours during production incidents: always name your constraints explicitly! ... Suppose an API returns an error saying constraint products_check_1 failed—nobody knows WHICH rule broke! Instead, name it ck_products_positive_price or uq_users_email using clean prefixes: pk for primary key, uq for unique, ck for check, fk for foreign key, and excl for exclude. The only exception is NOT NULL, which stays attached directly to the column.
 
 | Term | Meaning / Explanation |
 | :--- | :--- |
-| **Point 1** | Always name your constraints |
-| **The naming convention is** | type prefix, underscore, table name, underscore, column or description |
-| **Primary key is pk** | unique is uq, check is ck, foreign key is fk, exclude is excl |
-| **Point 4** | Named constraints make error messages readable and make it easy to alter or drop them later |
-| **NOT NULL is the exception** | it doesn't get a name |
+| **Formula** | <prefix>_<table>_<column_or_rule> (lowercase snake_case) |
+| **pk_ & fk_** | pk_orders (Primary Key) | fk_orders_customer (Foreign Key) |
+| **uq_ & ck_** | uq_users_email (Unique) | ck_products_price_pos (Check rule) |
+| **excl_** | excl_bookings_no_overlap (Exclusion scheduling constraint) |
+| **NOT NULL** | Inline column rule — does not need an explicit constraint name |
 
 
 ---
@@ -546,6 +546,48 @@ Practice time. Create a users table with every constraint type — primary key, 
 6. Add a CHECK constraint to posts: title length > 0
 7. Create a room_bookings table with EXCLUDE to prevent overlapping bookings
 
+
+---
+
+
+### Answer Key — Constraints Solutions
+
+```sql
+-- 1. Table with PRIMARY KEY, UNIQUE, and CHECK constraints
+-- Note: Named constraints make error debugging much easier.
+CREATE TABLE team_members (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    age INT CHECK (age BETWEEN 18 AND 70),
+    role VARCHAR(30) DEFAULT 'Developer'
+);
+
+-- 2. FOREIGN KEY with ON DELETE CASCADE and SET NULL
+-- Note: CASCADE deletes children; SET NULL clears reference.
+CREATE TABLE projects (id SERIAL PRIMARY KEY, lead_id INT REFERENCES team_members(id) ON DELETE SET NULL);
+CREATE TABLE tasks (id SERIAL PRIMARY KEY, project_id INT REFERENCES projects(id) ON DELETE CASCADE);
+
+-- 3. EXCLUDE constraint preventing overlapping room bookings
+-- Note: Requires btree_gist extension for scalar + range exclusion.
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE TABLE room_bookings (
+    room_id INT,
+    during TSTZRANGE,
+    EXCLUDE USING GIST (room_id WITH =, during WITH &&)
+);
+
+-- 4. ALTER TABLE ADD and DROP constraint
+-- Note: Always name constraints explicitly for simple alteration.
+ALTER TABLE team_members ADD CONSTRAINT ck_min_age CHECK (age >= 18);
+ALTER TABLE team_members DROP CONSTRAINT ck_min_age;
+
+-- 5. Checking constraint violations in psql
+-- Note: Familiarize yourself with exact error strings.
+INSERT INTO team_members (email, age) VALUES ('test@co.com', 15); -- triggers check constraint
+INSERT INTO team_members (email, age) VALUES ('test@co.com', 25); -- succeeds
+INSERT INTO team_members (email, age) VALUES ('test@co.com', 25); -- triggers unique constraint
+
+```
 
 ---
 
