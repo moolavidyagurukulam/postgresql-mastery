@@ -334,3 +334,69 @@ DROP FUNCTION IF EXISTS all_accounts();
 -- =============================================
 -- Next Class: PL/pgSQL Control Flow & RAISE
 -- =============================================
+
+
+-- ============================================================================
+-- CLASS 053: SQL FUNCTIONS & INTRODUCTION TO PL/PGSQL — PRACTICE EXERCISES & SOLUTIONS
+-- ============================================================================
+
+-- Exercise 1: Pure SQL tax calculation function
+CREATE OR REPLACE FUNCTION calc_tax(p NUMERIC, r NUMERIC) 
+RETURNS NUMERIC AS $$ 
+    SELECT ROUND(p * (r / 100.0), 2); 
+$$ LANGUAGE sql IMMUTABLE STRICT;
+
+SELECT calc_tax(199.99, 8.25);
+
+-- Exercise 2: Table-returning function for stock inventory
+CREATE OR REPLACE FUNCTION low_stock_products(min_stock INT) 
+RETURNS TABLE(product_id INT, product_name TEXT, current_stock INT) AS $$ 
+    SELECT id, name, stock 
+    FROM products 
+    WHERE stock < min_stock
+    ORDER BY stock ASC; 
+$$ LANGUAGE sql STABLE;
+
+-- Exercise 3: PL/pgSQL customer tier evaluation with %TYPE
+CREATE OR REPLACE FUNCTION get_customer_tier(p_customer_id INT) 
+RETURNS TEXT AS $$ 
+DECLARE 
+    v_balance customers.balance%TYPE; 
+BEGIN 
+    SELECT balance INTO v_balance FROM customers WHERE id = p_customer_id; 
+    IF NOT FOUND THEN
+        RETURN 'Unknown Customer';
+    ELSIF v_balance > 5000.00 THEN 
+        RETURN 'Gold Tier'; 
+    ELSIF v_balance > 1000.00 THEN 
+        RETURN 'Silver Tier'; 
+    ELSE 
+        RETURN 'Standard Tier'; 
+    END IF; 
+END; 
+$$ LANGUAGE plpgsql STABLE;
+
+-- Exercise 4: Demonstrating FOUND flag in scalar assignment
+DO $$
+DECLARE
+    v_email users.email%TYPE;
+BEGIN
+    SELECT email INTO v_email FROM users WHERE id = 99999;
+    IF NOT FOUND THEN
+        RAISE NOTICE 'User 99999 does not exist in the database.';
+    ELSE
+        RAISE NOTICE 'Found user email: %', v_email;
+    END IF;
+END $$;
+
+-- Exercise 5: System catalog audit of custom functions
+SELECT 
+    pg_proc.proname AS function_name,
+    pg_proc.provolatile AS volatility,
+    pg_language.lanname AS language,
+    pg_proc.prosrc AS source_code
+FROM pg_proc 
+JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid 
+JOIN pg_language ON pg_proc.prolang = pg_language.oid
+WHERE pg_namespace.nspname = 'public'
+ORDER BY function_name;

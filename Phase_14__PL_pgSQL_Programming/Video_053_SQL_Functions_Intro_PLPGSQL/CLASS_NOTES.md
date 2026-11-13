@@ -359,14 +359,89 @@ CREATE FUNCTION
 
 ---
 
-## 6. Hands-On Practice Exercises (Try It Yourself!)
+## 6. Hands-On Practice Exercises & Verified Solutions
 
-1. Open your terminal and connect to your local practice database: `psql -U postgres -d practice`
-2. Open and execute the companion `materials.sql` script: `\i materials.sql`
-3. Verify the execution outputs and experiment with the parameters and queries covered in this class.
+### Exercise 1: Pure SQL Immutable Tax Calculator
+**Challenge:** Write a pure SQL function `calc_tax(price, rate)` returning `price * (rate / 100.0)` rounded to two decimals. Mark it `IMMUTABLE STRICT`.
+```sql
+CREATE OR REPLACE FUNCTION calc_tax(p NUMERIC, r NUMERIC) 
+RETURNS NUMERIC AS $$ 
+    SELECT ROUND(p * (r / 100.0), 2); 
+$$ LANGUAGE sql IMMUTABLE STRICT;
 
+SELECT calc_tax(199.99, 8.25); -- Returns 16.50
+```
+*Explanation:* `IMMUTABLE` guarantees deterministic output for identical arguments, allowing query inlining and expression indexing. `STRICT` returns `NULL` instantly if any input is `NULL`.
 
----
+### Exercise 2: Table-Returning Inventory Filter
+**Challenge:** Create a function `low_stock_products(min_stock INT)` returning a relational dataset of products below threshold.
+```sql
+CREATE OR REPLACE FUNCTION low_stock_products(min_stock INT) 
+RETURNS TABLE(product_id INT, product_name TEXT, current_stock INT) AS $$ 
+    SELECT id, name, stock 
+    FROM products 
+    WHERE stock < min_stock
+    ORDER BY stock ASC; 
+$$ LANGUAGE sql STABLE;
+
+SELECT * FROM low_stock_products(10) WHERE current_stock > 0;
+```
+*Explanation:* `RETURNS TABLE(...)` outputs a structured tuple stream queryable directly in `FROM` clauses.
+
+### Exercise 3: Dynamic Type Anchoring with %TYPE
+**Challenge:** Author a PL/pgSQL function `get_customer_tier(p_id)` using `customers.balance%TYPE` variables to classify spending tiers.
+```sql
+CREATE OR REPLACE FUNCTION get_customer_tier(p_customer_id INT) 
+RETURNS TEXT AS $$ 
+DECLARE 
+    v_balance customers.balance%TYPE; 
+BEGIN 
+    SELECT balance INTO v_balance FROM customers WHERE id = p_customer_id; 
+    IF NOT FOUND THEN
+        RETURN 'Unknown Customer';
+    ELSIF v_balance > 5000.00 THEN 
+        RETURN 'Gold Tier'; 
+    ELSIF v_balance > 1000.00 THEN 
+        RETURN 'Silver Tier'; 
+    ELSE 
+        RETURN 'Standard Tier'; 
+    END IF; 
+END; 
+$$ LANGUAGE plpgsql STABLE;
+```
+*Explanation:* `%TYPE` automatically tracks schema changes if `balance` is altered from `INTEGER` to `NUMERIC(12,2)`.
+
+### Exercise 4: Verifying Row Existence via FOUND
+**Challenge:** Demonstrate how `SELECT INTO` populates the automatic `FOUND` boolean variable to handle non-existent rows gracefully.
+```sql
+DO $$
+DECLARE
+    v_email users.email%TYPE;
+BEGIN
+    SELECT email INTO v_email FROM users WHERE id = 99999;
+    IF NOT FOUND THEN
+        RAISE NOTICE 'Target row does not exist!';
+    END IF;
+END $$;
+```
+*Explanation:* `FOUND` evaluates to `true` if `SELECT INTO` returns >= 1 row, and `false` if 0 rows match.
+
+### Exercise 5: Auditing Custom Functions in pg_proc
+**Challenge:** Query the PostgreSQL system catalog to inspect custom functions, volatility codes, and implementation languages.
+```sql
+SELECT 
+    pg_proc.proname AS function_name,
+    pg_proc.provolatile AS volatility,
+    pg_language.lanname AS language,
+    pg_proc.prosrc AS source_code
+FROM pg_proc 
+JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid 
+JOIN pg_language ON pg_proc.prolang = pg_language.oid
+WHERE pg_namespace.nspname = 'public'
+ORDER BY function_name;
+```
+*Explanation:* Allows DBAs to audit function code, verify volatility optimizations, and check security flags across the cluster.
+
 
 ## 7. Key Takeaways & Cheat Sheet
 
