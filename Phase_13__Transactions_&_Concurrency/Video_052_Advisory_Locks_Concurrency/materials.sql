@@ -291,3 +291,55 @@ DROP TABLE IF EXISTS products;
 -- =============================================
 -- Next Phase: PL/pgSQL Programming
 -- =============================================
+
+
+-- =============================================
+-- === PRACTICE EXERCISES & VERIFIED SOLUTIONS ===
+-- =============================================
+
+-- Exercise 1: Session Advisory Lock Blocking Test
+-- Terminal A:
+SELECT pg_advisory_lock(100);
+
+-- Terminal B:
+-- SELECT pg_advisory_lock(100); -- WAITS...
+
+-- Terminal A:
+SELECT pg_advisory_unlock(100);
+-- Terminal B unblocks!
+-- Terminal B releases:
+-- SELECT pg_advisory_unlock(100);
+
+-- Exercise 2: Non-Blocking Try Lock
+SELECT pg_try_advisory_lock(200); -- Returns true (acquired)
+-- In concurrent session: SELECT pg_try_advisory_lock(200); -- Returns false immediately!
+SELECT pg_advisory_unlock(200);
+
+-- Exercise 3: Transaction-Level Advisory Lock
+BEGIN;
+SELECT pg_advisory_xact_lock(300);
+UPDATE accounts SET bal = bal - 50 WHERE id = 1;
+COMMIT; -- Auto-released!
+
+-- Exercise 4: Optimistic Concurrency with Version Column
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS version INT DEFAULT 1;
+
+-- Attempt atomic update:
+UPDATE accounts
+SET bal = 800.00, version = version + 1
+WHERE id = 1 AND version = 1;
+
+-- Exercise 5: Idempotent Upsert
+CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id INT PRIMARY KEY,
+    theme VARCHAR(20),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+INSERT INTO user_preferences (user_id, theme)
+VALUES (1, 'dark')
+ON CONFLICT (user_id)
+DO UPDATE SET theme = EXCLUDED.theme, updated_at = NOW();
+
+SELECT * FROM user_preferences;
+

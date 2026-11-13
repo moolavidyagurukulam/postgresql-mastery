@@ -178,14 +178,64 @@ INSERT 0 0  -- 0 rows inserted, no error!
 
 ---
 
-## 6. Hands-On Practice Exercises (Try It Yourself!)
 
-1. Open your terminal and connect to your local practice database: `psql -U postgres -d practice`
-2. Open and execute the companion `materials.sql` script: `\i materials.sql`
-3. Verify the execution outputs and experiment with the parameters and queries covered in this class.
+## 6. Hands-On Practice Exercises & Verified Solutions
 
+### Exercise 1: Session Advisory Lock Mutual Exclusion
+**Challenge:** Acquire a session-level advisory lock in Session A and verify blocking behavior in Session B.
+```sql
+-- Session A:
+SELECT pg_advisory_lock(100);
 
----
+-- Session B:
+SELECT pg_advisory_lock(100); -- blocks and waits
+
+-- Session A:
+SELECT pg_advisory_unlock(100);
+-- Session B unblocks immediately!
+```
+*Explanation:* Session-level advisory locks provide mutual exclusion across database connections independently of transaction blocks.
+
+### Exercise 2: Non-Blocking Leader Election
+**Challenge:** Use `pg_try_advisory_lock` to coordinate single-worker execution without waiting.
+```sql
+SELECT pg_try_advisory_lock(200); -- returns true for leader, false for secondary workers
+-- Cleanup:
+SELECT pg_advisory_unlock(200);
+```
+*Explanation:* Returns true if the lock was acquired immediately, or false if already held, enabling instant exit for redundant workers.
+
+### Exercise 3: Transaction-Scoped Advisory Locks
+**Challenge:** Lock an application resource using `pg_advisory_xact_lock` and observe automatic release upon `COMMIT`.
+```sql
+BEGIN;
+SELECT pg_advisory_xact_lock(300);
+UPDATE accounts SET bal = bal - 50 WHERE id = 1;
+COMMIT;
+```
+*Explanation:* Transaction-level advisory locks eliminate manual unlock calls, automatically freeing shared memory locks on commit or rollback.
+
+### Exercise 4: Optimistic Locking with Versioning
+**Challenge:** Execute an update asserting that the record version has not diverged since initial read.
+```sql
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS version INT DEFAULT 1;
+
+UPDATE accounts
+SET bal = 800.00, version = version + 1
+WHERE id = 1 AND version = 1;
+```
+*Explanation:* If another transaction incremented the version first, zero rows are updated, signaling an optimistic concurrency collision.
+
+### Exercise 5: Idempotent Concurrency via ON CONFLICT
+**Challenge:** Construct an idempotent ingestion query using `INSERT ... ON CONFLICT DO UPDATE`.
+```sql
+INSERT INTO user_preferences (user_id, theme)
+VALUES (1, 'dark')
+ON CONFLICT (user_id)
+DO UPDATE SET theme = EXCLUDED.theme, updated_at = NOW();
+```
+*Explanation:* PostgreSQL handles unique key conflicts atomically at the engine layer, updating the existing record without throwing error violations.
+
 
 ## 7. Key Takeaways & Cheat Sheet
 
