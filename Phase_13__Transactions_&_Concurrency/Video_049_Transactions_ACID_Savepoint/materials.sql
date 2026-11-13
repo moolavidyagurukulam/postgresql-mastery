@@ -243,3 +243,57 @@ WHERE id IN (1, 2, 3);
 -- =============================================
 -- Next Class: Isolation Levels
 -- =============================================
+
+
+-- =============================================
+-- === PRACTICE EXERCISES & VERIFIED SOLUTIONS ===
+-- =============================================
+
+-- Exercise 1: Atomic Fund Transfer
+BEGIN;
+UPDATE accounts SET bal = bal - 100 WHERE id = 1;
+UPDATE accounts SET bal = bal + 100 WHERE id = 2;
+COMMIT;
+
+SELECT * FROM accounts;
+
+-- Exercise 2: Abort and Rollback
+BEGIN;
+DELETE FROM accounts WHERE id = 3;
+ROLLBACK;
+
+SELECT * FROM accounts WHERE id = 3;
+
+-- Exercise 3: Guarding Errors with SAVEPOINT
+BEGIN;
+UPDATE accounts SET bal = bal + 50 WHERE id = 1;
+SAVEPOINT sp_risky;
+
+-- This fails due to primary key duplicate
+INSERT INTO accounts (id, name, bal) VALUES (1, 'Duplicate Alice', 0);
+
+-- Recover without aborting the transaction
+ROLLBACK TO SAVEPOINT sp_risky;
+COMMIT;
+
+SELECT * FROM accounts WHERE id = 1;
+
+-- Exercise 4: Transactional DDL
+BEGIN;
+ALTER TABLE accounts ADD COLUMN status VARCHAR(20) DEFAULT 'active';
+SELECT * FROM accounts;
+ROLLBACK;
+
+\d accounts
+
+-- Exercise 5: Monitoring Active Transactions
+SELECT
+    pid,
+    usename,
+    state,
+    NOW() - xact_start AS xact_duration,
+    query
+FROM pg_stat_activity
+WHERE xact_start IS NOT NULL
+ORDER BY xact_duration DESC;
+

@@ -389,14 +389,70 @@ ERROR:  relation "test_ddl" does not exist
 
 ---
 
-## 6. Hands-On Practice Exercises (Try It Yourself!)
 
-1. Open your terminal and connect to your local practice database: `psql -U postgres -d practice`
-2. Open and execute the companion `materials.sql` script: `\i materials.sql`
-3. Verify the execution outputs and experiment with the parameters and queries covered in this class.
+## 6. Hands-On Practice Exercises & Verified Solutions
 
+### Exercise 1: Atomic Balance Transfer
+**Challenge:** Execute a two-step atomic fund transfer between accounts inside a transaction block.
+```sql
+BEGIN;
+UPDATE accounts SET bal = bal - 100 WHERE id = 1;
+UPDATE accounts SET bal = bal + 100 WHERE id = 2;
+COMMIT;
+```
+*Explanation:* Both update operations commit atomically; if a crash occurs midway, both updates are rolled back together.
 
----
+### Exercise 2: Verifying ROLLBACK Integrity
+**Challenge:** Delete an account inside a transaction, roll back, and verify the record remains intact.
+```sql
+BEGIN;
+DELETE FROM accounts WHERE id = 3;
+ROLLBACK;
+
+SELECT * FROM accounts WHERE id = 3;
+```
+*Explanation:* `ROLLBACK` cancels all uncommitted modifications made since `BEGIN`, leaving the underlying heap pages untouched.
+
+### Exercise 3: Error Recovery via SAVEPOINT
+**Challenge:** Guard a statement that triggers a unique constraint violation using a `SAVEPOINT`, then commit the valid work.
+```sql
+BEGIN;
+UPDATE accounts SET bal = bal + 50 WHERE id = 1;
+
+SAVEPOINT sp_risky;
+INSERT INTO accounts (id, name, bal) VALUES (1, 'Duplicate Alice', 0); -- fails!
+ROLLBACK TO SAVEPOINT sp_risky;
+
+COMMIT;
+```
+*Explanation:* Rolling back to `sp_risky` clears the aborted transaction state for the failed insert, permitting the valid balance update to commit.
+
+### Exercise 4: Transactional DDL Rollback
+**Challenge:** Add a column to the `accounts` table inside a transaction block and roll it back.
+```sql
+BEGIN;
+ALTER TABLE accounts ADD COLUMN status VARCHAR(20) DEFAULT 'active';
+ROLLBACK;
+
+\d accounts
+```
+*Explanation:* In PostgreSQL, schema alterations are fully transactional; rolling back reverts the system catalog updates instantly.
+
+### Exercise 5: Auditing Open Transactions
+**Challenge:** Query `pg_stat_activity` to find all sessions currently in an active or idle-in-transaction state.
+```sql
+SELECT
+    pid,
+    usename,
+    state,
+    NOW() - xact_start AS xact_duration,
+    query
+FROM pg_stat_activity
+WHERE xact_start IS NOT NULL
+ORDER BY xact_duration DESC;
+```
+*Explanation:* Audits lingering transaction blocks that block table locks and prevent autovacuum from freeing dead tuple space.
+
 
 ## 7. Key Takeaways & Cheat Sheet
 
