@@ -184,14 +184,74 @@ practice=*# COMMIT;
 
 ---
 
-## 6. Hands-On Practice Exercises (Try It Yourself!)
 
-1. Open your terminal and connect to your local practice database: `psql -U postgres -d practice`
-2. Open and execute the companion `materials.sql` script: `\i materials.sql`
-3. Verify the execution outputs and experiment with the parameters and queries covered in this class.
+## 6. Hands-On Practice Exercises & Verified Solutions
 
+### Exercise 1: Explicit Row Locking via SELECT FOR UPDATE
+**Challenge:** Lock an account row using `SELECT FOR UPDATE` before applying a balance decrement.
+```sql
+BEGIN;
+SELECT * FROM accounts WHERE id = 1 FOR UPDATE;
+UPDATE accounts SET bal = bal - 100 WHERE id = 1;
+COMMIT;
+```
+*Explanation:* The `FOR UPDATE` clause acquires an exclusive row-level lock, guaranteeing that any competing transaction attempting to read or write row 1 with a lock must wait until commit.
 
----
+### Exercise 2: Building a Parallel Queue with SKIP LOCKED
+**Challenge:** Select and lock the next pending job from `job_queue` using `FOR UPDATE SKIP LOCKED`.
+```sql
+BEGIN;
+SELECT * FROM job_queue
+WHERE status = 'pending'
+ORDER BY id
+LIMIT 1
+FOR UPDATE SKIP LOCKED;
+
+UPDATE job_queue SET status = 'completed' WHERE id = 1;
+COMMIT;
+```
+*Explanation:* `SKIP LOCKED` instructs PostgreSQL to bypass any rows currently locked by other concurrent workers, eliminating lock wait times and enabling high concurrency.
+
+### Exercise 3: Simulating and Resolving a Deadlock
+**Challenge:** Intentionally cause a deadlock by having Session A update rows 1 then 2, while Session B updates rows 2 then 1.
+```sql
+-- Session A:
+BEGIN; UPDATE accounts SET bal = bal - 10 WHERE id = 1;
+-- Session B:
+BEGIN; UPDATE accounts SET bal = bal - 20 WHERE id = 2;
+-- Session A:
+UPDATE accounts SET bal = bal + 10 WHERE id = 2; -- waits on B
+-- Session B:
+UPDATE accounts SET bal = bal + 20 WHERE id = 1; -- triggers deadlock!
+```
+*Explanation:* PostgreSQL detects the dependency cycle and automatically aborts one session with `ERROR: deadlock detected` to allow the other to complete.
+
+### Exercise 4: Configuring Deadlock Detection Timeout
+**Challenge:** Inspect and configure the `deadlock_timeout` parameter.
+```sql
+SHOW deadlock_timeout;
+SET deadlock_timeout = '500ms';
+```
+*Explanation:* Adjusts the threshold before the background wait-for cycle detector runs. Shorter values detect deadlocks faster at the expense of slight CPU overhead.
+
+### Exercise 5: Investigating Lock Contention via pg_locks
+**Challenge:** Query PostgreSQL system catalogs to pinpoint blocking and blocked session PIDs.
+```sql
+SELECT
+    blocked_locks.pid     AS blocked_pid,
+    blocking_locks.pid    AS blocking_pid,
+    blocked_activity.query    AS blocked_statement,
+    blocking_activity.query   AS blocking_statement
+FROM  pg_catalog.pg_locks         blocked_locks
+JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
+JOIN pg_catalog.pg_locks         blocking_locks 
+    ON blocking_locks.locktype = blocked_locks.locktype
+    AND blocking_locks.pid != blocked_locks.pid
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+WHERE NOT blocked_locks.granted;
+```
+*Explanation:* Directly reveals which transaction is holding locks and which queries are queued behind it.
+
 
 ## 7. Key Takeaways & Cheat Sheet
 
