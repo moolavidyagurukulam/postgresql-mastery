@@ -241,3 +241,84 @@ SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL READ COMMITTED;
 -- =============================================
 -- Next Class: Row Locks, Table Locks & Deadlocks
 -- =============================================
+
+
+-- =============================================
+-- === PRACTICE EXERCISES & VERIFIED SOLUTIONS ===
+-- =============================================
+
+-- Exercise 1: Non-Repeatable Read in READ COMMITTED
+-- Terminal A:
+BEGIN;
+SELECT bal FROM accounts WHERE id = 1;
+
+-- Terminal B:
+-- UPDATE accounts SET bal = 850.00 WHERE id = 1;
+
+-- Terminal A:
+SELECT bal FROM accounts WHERE id = 1; -- Sees 850.00!
+COMMIT;
+
+-- Exercise 2: Frozen Snapshot in REPEATABLE READ
+-- Terminal A:
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SELECT bal FROM accounts WHERE id = 1;
+
+-- Terminal B:
+-- UPDATE accounts SET bal = 700.00 WHERE id = 1;
+
+-- Terminal A:
+SELECT bal FROM accounts WHERE id = 1; -- Still sees 850.00!
+COMMIT;
+
+-- Exercise 3: Concurrent Update Serialization Failure
+-- Terminal A:
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SELECT bal FROM accounts WHERE id = 1;
+
+-- Terminal B:
+-- UPDATE accounts SET bal = 600.00 WHERE id = 1;
+
+-- Terminal A:
+-- UPDATE accounts SET bal = 650.00 WHERE id = 1;
+-- ERROR: could not serialize access due to concurrent update
+ROLLBACK;
+
+-- Exercise 4: Simulating Write Skew (Doctor On-Call Problem)
+CREATE TABLE IF NOT EXISTS on_call (
+    doctor_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    is_on_call BOOLEAN
+);
+
+INSERT INTO on_call VALUES (1, 'Alice', true), (2, 'Bob', true)
+ON CONFLICT (doctor_id) DO NOTHING;
+
+-- Both Alice and Bob go off-call simultaneously under REPEATABLE READ:
+-- Terminal A:
+-- BEGIN ISOLATION LEVEL REPEATABLE READ;
+-- SELECT COUNT(*) FROM on_call WHERE is_on_call = true; -- sees 2
+-- UPDATE on_call SET is_on_call = false WHERE doctor_id = 1;
+-- COMMIT;
+
+-- Terminal B (concurrent):
+-- BEGIN ISOLATION LEVEL REPEATABLE READ;
+-- SELECT COUNT(*) FROM on_call WHERE is_on_call = true; -- sees 2
+-- UPDATE on_call SET is_on_call = false WHERE doctor_id = 2;
+-- COMMIT;
+-- Result: Both commit! ZERO doctors on call! (Write Skew)
+
+-- Exercise 5: Resolving Write Skew with SERIALIZABLE
+-- Terminal A:
+-- BEGIN ISOLATION LEVEL SERIALIZABLE;
+-- SELECT COUNT(*) FROM on_call WHERE is_on_call = true;
+-- UPDATE on_call SET is_on_call = false WHERE doctor_id = 1;
+-- COMMIT;
+
+-- Terminal B (concurrent):
+-- BEGIN ISOLATION LEVEL SERIALIZABLE;
+-- SELECT COUNT(*) FROM on_call WHERE is_on_call = true;
+-- UPDATE on_call SET is_on_call = false WHERE doctor_id = 2;
+-- COMMIT;
+-- ERROR: could not serialize access due to read/write dependencies among transactions (40001)
+

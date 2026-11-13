@@ -192,14 +192,85 @@ practice=# SHOW transaction_isolation;
 
 ---
 
-## 6. Hands-On Practice Exercises (Try It Yourself!)
 
-1. Open your terminal and connect to your local practice database: `psql -U postgres -d practice`
-2. Open and execute the companion `materials.sql` script: `\i materials.sql`
-3. Verify the execution outputs and experiment with the parameters and queries covered in this class.
+## 6. Hands-On Practice Exercises & Verified Solutions
 
+### Exercise 1: Demonstrating Non-Repeatable Reads
+**Challenge:** Run two concurrent sessions under `READ COMMITTED` to observe how statement-level snapshots expose intermediate changes.
+```sql
+-- Session A:
+BEGIN;
+SELECT bal FROM accounts WHERE id = 1; -- 1000.00
 
----
+-- Session B:
+UPDATE accounts SET bal = 850.00 WHERE id = 1;
+
+-- Session A:
+SELECT bal FROM accounts WHERE id = 1; -- 850.00!
+COMMIT;
+```
+*Explanation:* Under Read Committed, every query takes a fresh snapshot. Because Session B committed between the two queries, Session A sees the updated row value.
+
+### Exercise 2: Frozen Transaction Snapshots
+**Challenge:** Execute the same test under `REPEATABLE READ` and verify that Session A remains insulated from Session B's committed updates.
+```sql
+-- Session A:
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SELECT bal FROM accounts WHERE id = 1; -- 850.00
+
+-- Session B:
+UPDATE accounts SET bal = 700.00 WHERE id = 1;
+
+-- Session A:
+SELECT bal FROM accounts WHERE id = 1; -- Still 850.00!
+COMMIT;
+```
+*Explanation:* Under Repeatable Read, the MVCC snapshot is frozen at transaction start, ignoring any transactions that commit after our snapshot horizon.
+
+### Exercise 3: Concurrent Update Serialization Failure
+**Challenge:** Attempt to update the same row in Session A after Session B has already committed a modification to it under `REPEATABLE READ`.
+```sql
+-- Session A:
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SELECT bal FROM accounts WHERE id = 1;
+
+-- Session B:
+UPDATE accounts SET bal = 600.00 WHERE id = 1;
+
+-- Session A:
+UPDATE accounts SET bal = 650.00 WHERE id = 1;
+-- ERROR: could not serialize access due to concurrent update
+ROLLBACK;
+```
+*Explanation:* PostgreSQL employs first-committer-wins. Because Session A cannot see Session B's committed change, updating the row would overwrite Session B's data, triggering a serialization error.
+
+### Exercise 4: Simulating Write Skew
+**Challenge:** Reproduce the classic hospital on-call dilemma under `REPEATABLE READ` where concurrent transactions violate business invariants without updating the same row.
+```sql
+-- Session A:
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT COUNT(*) FROM on_call WHERE is_on_call = true; -- returns 2
+UPDATE on_call SET is_on_call = false WHERE doctor_id = 1;
+COMMIT;
+
+-- Session B:
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT COUNT(*) FROM on_call WHERE is_on_call = true; -- returns 2
+UPDATE on_call SET is_on_call = false WHERE doctor_id = 2;
+COMMIT;
+```
+*Explanation:* Both transactions commit because they update disjoint rows. However, the system invariant (at least one doctor on-call) is violated.
+
+### Exercise 5: Eliminating Write Skew with SERIALIZABLE
+**Challenge:** Re-run the on-call scenario under `SERIALIZABLE` and verify that PostgreSQL SSI detects the dependency cycle.
+```sql
+-- Session A & B run under:
+BEGIN ISOLATION LEVEL SERIALIZABLE;
+-- Session B receives:
+-- ERROR: could not serialize access due to read/write dependencies among transactions (SQLSTATE 40001)
+```
+*Explanation:* Serializable Snapshot Isolation detects the read-write dependency cycle between transactions and aborts the victim transaction with error `40001`, preserving the invariant.
+
 
 ## 7. Key Takeaways & Cheat Sheet
 
