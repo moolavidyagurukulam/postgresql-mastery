@@ -1,313 +1,240 @@
--- =============================================
--- PostgreSQL Mastery: PL/pgSQL Control Flow & RAISE
--- Phase 14: PL/pgSQL Programming | Classes 112-113
--- =============================================
--- IF/ELSIF/ELSE, CASE, RAISE levels, debugging,
--- USING HINT/ERRCODE, NULL handling.
--- =============================================
+-- ====================================================================
+-- Class 054: PL/pgSQL Control Flow & RAISE Statements
+-- PostgreSQL 16 Admin & Developer Mastery Series
+-- MoolaVidya Gurukulam — 100% Free High-Impact Education
+-- ====================================================================
 
--- === SETUP ===
-
-CREATE TABLE IF NOT EXISTS accounts (
-    id   INT PRIMARY KEY,
-    name VARCHAR(50),
-    bal  NUMERIC(10,2)
+-- Setup mock schema for tests
+DROP TABLE IF EXISTS accounts CASCADE;
+CREATE TABLE accounts (
+    account_id INT PRIMARY KEY,
+    owner_name TEXT NOT NULL,
+    balance NUMERIC(12, 2) NOT NULL CHECK (balance >= 0)
 );
 
-DELETE FROM accounts;
-INSERT INTO accounts VALUES
-(1, 'Alice', 1000.00),
-(2, 'Bob',    500.00),
-(3, 'Carol',  300.00);
+INSERT INTO accounts (account_id, owner_name, balance) VALUES
+(101, 'Alice Corp', 5000.00),
+(102, 'Bob Logistics', 12500.00),
+(103, 'Charlie Ventures', 750.00);
 
--- === IF / ELSIF / ELSE ===
-
-CREATE OR REPLACE FUNCTION account_tier(acct_id INT)
-RETURNS VARCHAR AS $$
+-- Demonstration 1: IF-THEN-ELSIF-ELSE with RAISE EXCEPTION
+CREATE OR REPLACE FUNCTION process_withdrawal(
+    p_account_id INT,
+    p_amount NUMERIC
+) RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
 DECLARE
-    acct_bal NUMERIC;
+    v_balance NUMERIC;
 BEGIN
-    SELECT bal INTO acct_bal FROM accounts WHERE id = acct_id;
-
+    SELECT balance INTO v_balance 
+    FROM accounts 
+    WHERE account_id = p_account_id;
+    
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Account % not found', acct_id;
-    ELSIF acct_bal >= 10000 THEN
-        RETURN 'Platinum';
-    ELSIF acct_bal >= 5000 THEN
-        RETURN 'Gold';
-    ELSIF acct_bal >= 1000 THEN
-        RETURN 'Silver';
+        RAISE EXCEPTION 'Account % not found', p_account_id
+            USING ERRCODE = 'no_data_found';
+    END IF;
+
+    IF p_amount <= 0 THEN
+        RAISE EXCEPTION 'Withdrawal amount must be strictly positive (requested: %)', p_amount
+            USING ERRCODE = 'check_violation',
+                  HINT = 'Pass a positive decimal value.';
+    ELSIF p_amount > v_balance THEN
+        RAISE EXCEPTION 'Insufficient funds: balance is %, attempted %', v_balance, p_amount
+            USING ERRCODE = 'integrity_constraint_violation',
+                  DETAIL = 'Account overdraft limits are disabled on standard retail accounts.';
     ELSE
-        RETURN 'Bronze';
+        UPDATE accounts 
+        SET balance = balance - p_amount 
+        WHERE account_id = p_account_id;
+        
+        RETURN 'SUCCESS: New balance is ' || (v_balance - p_amount);
     END IF;
 END;
-$$ LANGUAGE plpgsql STABLE;
+$$;
 
--- Test it:
-SELECT name, bal, account_tier(id) AS tier FROM accounts;
--- Alice | 1000.00 | Silver
--- Bob   |  500.00 | Bronze
--- Carol |  300.00 | Bronze
-
--- === SIMPLE CASE ===
-
-CREATE OR REPLACE FUNCTION status_label(code CHAR)
-RETURNS VARCHAR AS $$
+-- Demonstration 2: Simple vs Searched CASE Statements
+CREATE OR REPLACE FUNCTION evaluate_credit_tier(p_score INT)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_tier TEXT;
 BEGIN
-    CASE code
-        WHEN 'A' THEN RETURN 'Active';
-        WHEN 'S' THEN RETURN 'Suspended';
-        WHEN 'C' THEN RETURN 'Closed';
-        WHEN 'P' THEN RETURN 'Pending';
-        ELSE RETURN 'Unknown: ' || code;
-    END CASE;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
-SELECT status_label('A');  -- Active
-SELECT status_label('S');  -- Suspended
-SELECT status_label('X');  -- Unknown: X
-
--- === SEARCHED CASE ===
-
-CREATE OR REPLACE FUNCTION age_category(age INT)
-RETURNS VARCHAR AS $$
-BEGIN
+    -- Searched CASE
     CASE
-        WHEN age IS NULL THEN
-            RETURN 'Unknown';
-        WHEN age < 0 THEN
-            RAISE EXCEPTION 'Age cannot be negative: %', age;
-        WHEN age < 13 THEN
-            RETURN 'Child';
-        WHEN age < 18 THEN
-            RETURN 'Teen';
-        WHEN age < 65 THEN
-            RETURN 'Adult';
-        ELSE
-            RETURN 'Senior';
+        WHEN p_score >= 800 THEN v_tier := 'PLATINUM';
+        WHEN p_score >= 700 THEN v_tier := 'GOLD';
+        WHEN p_score >= 600 THEN v_tier := 'SILVER';
+        WHEN p_score IS NULL THEN v_tier := 'UNRATED';
+        ELSE v_tier := 'SUBPRIME';
     END CASE;
+    RETURN v_tier;
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$;
 
-SELECT age_category(8);    -- Child
-SELECT age_category(16);   -- Teen
-SELECT age_category(35);   -- Adult
-SELECT age_category(70);   -- Senior
-SELECT age_category(NULL); -- Unknown
--- SELECT age_category(-5);  -- ERROR: Age cannot be negative
-
--- === RAISE LEVELS ===
-
-CREATE OR REPLACE FUNCTION raise_demo()
-RETURNS VOID AS $$
+-- Demonstration 3: Diagnostic RAISE Levels
+CREATE OR REPLACE FUNCTION test_raise_levels()
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    RAISE DEBUG   'This is DEBUG (hidden by default)';
-    RAISE LOG     'This is LOG (server log only)';
-    RAISE INFO    'This is INFO';
-    RAISE NOTICE  'This is NOTICE (most common for debugging)';
-    RAISE WARNING 'This is WARNING';
-    -- RAISE EXCEPTION 'This stops execution!';
+    RAISE DEBUG 'Debug info for engine logs';
+    RAISE LOG 'Log written to postgresql server log file';
+    RAISE INFO 'Informational message always pushed to client';
+    RAISE NOTICE 'Notice: standard application progress ping';
+    RAISE WARNING 'Warning: non-fatal warning condition detected';
+    -- RAISE EXCEPTION 'Exception: this terminates transaction immediately!';
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-SELECT raise_demo();
--- INFO:  This is INFO
--- NOTICE:  This is NOTICE (most common for debugging)
--- WARNING: This is WARNING
+-- ====================================================================
+-- Hands-On Practice Solutions
+-- ====================================================================
 
--- To see DEBUG messages:
--- SET client_min_messages = 'debug';
--- SELECT raise_demo();
--- RESET client_min_messages;
+-- Challenge 1: calc_tier_discount
+CREATE OR REPLACE FUNCTION calc_tier_discount(p_total_spent NUMERIC)
+RETURNS NUMERIC
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF p_total_spent < 0 THEN
+        RAISE EXCEPTION 'Total spent cannot be negative: %', p_total_spent
+            USING ERRCODE = 'check_violation',
+                  HINT = 'Provide a non-negative purchase total.';
+    ELSIF p_total_spent >= 10000 THEN
+        RETURN 0.25;
+    ELSIF p_total_spent >= 5000 THEN
+        RETURN 0.15;
+    ELSIF p_total_spent >= 1000 THEN
+        RETURN 0.10;
+    ELSE
+        RETURN 0.00;
+    END IF;
+END;
+$$;
 
--- === RAISE WITH PLACEHOLDERS ===
-
-CREATE OR REPLACE FUNCTION raise_placeholders_demo()
-RETURNS VOID AS $$
+-- Challenge 2: next_order_stage
+CREATE OR REPLACE FUNCTION next_order_stage(p_current_status TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
 DECLARE
-    user_name VARCHAR := 'Alice';
-    user_bal  NUMERIC := 1000.00;
+    v_next TEXT;
 BEGIN
-    -- % is replaced with the next argument
-    RAISE NOTICE 'User: %, Balance: %', user_name, user_bal;
-    RAISE NOTICE 'Tax: %', user_bal * 0.18;
-
-    -- Multiple placeholders
-    RAISE NOTICE '% has % which is % threshold',
-        user_name, user_bal,
-        CASE WHEN user_bal >= 500 THEN 'above' ELSE 'below' END;
+    CASE UPPER(TRIM(p_current_status))
+        WHEN 'DRAFT' THEN v_next := 'PENDING';
+        WHEN 'PENDING' THEN v_next := 'PROCESSING';
+        WHEN 'PROCESSING' THEN v_next := 'SHIPPED';
+        WHEN 'SHIPPED' THEN v_next := 'DELIVERED';
+        WHEN 'DELIVERED' THEN v_next := 'ARCHIVED';
+        ELSE
+            RAISE EXCEPTION 'Invalid order stage transition from %', p_current_status
+                USING ERRCODE = 'invalid_parameter_value',
+                      HINT = 'Permissible states: DRAFT, PENDING, PROCESSING, SHIPPED, DELIVERED.';
+    END CASE;
+    RETURN v_next;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-SELECT raise_placeholders_demo();
-
--- === RAISE EXCEPTION WITH USING ===
-
-CREATE OR REPLACE FUNCTION strict_withdraw(acct_id INT, amount NUMERIC)
-RETURNS NUMERIC AS $$
-DECLARE
-    current_bal NUMERIC;
+-- Challenge 3: register_system_user
+CREATE OR REPLACE FUNCTION register_system_user(
+    p_username TEXT, 
+    p_email TEXT, 
+    p_role TEXT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
 BEGIN
-    IF amount <= 0 THEN
-        RAISE EXCEPTION 'Amount must be positive: %', amount
-            USING HINT = 'Pass a positive number greater than zero',
-                  ERRCODE = 'invalid_parameter_value';
+    IF LENGTH(TRIM(p_username)) < 3 THEN
+        RAISE EXCEPTION 'Username "%" must be at least 3 characters long', p_username
+            USING ERRCODE = 'string_data_length_mismatch';
     END IF;
 
-    SELECT bal INTO current_bal FROM accounts WHERE id = acct_id;
+    IF POSITION('@' IN p_email) = 0 THEN
+        RAISE EXCEPTION 'Invalid email address provided: %', p_email
+            USING ERRCODE = 'invalid_parameter_value',
+                  HINT = 'Ensure email contains an @ symbol.';
+    END IF;
 
+    CASE LOWER(TRIM(p_role))
+        WHEN 'admin', 'analyst', 'operator' THEN
+            NULL; -- Valid role, continue
+        ELSE
+            RAISE EXCEPTION 'Unauthorized role assignment: %', p_role
+                USING ERRCODE = 'invalid_parameter_value',
+                      HINT = 'Role must be admin, analyst, or operator.';
+    END CASE;
+
+    RAISE NOTICE 'Provisioned account for % (Role: %)', p_username, p_role;
+    RETURN 'SUCCESS: Account active';
+END;
+$$;
+
+-- Challenge 4: safe_metric_ratio
+CREATE OR REPLACE FUNCTION safe_metric_ratio(
+    p_numerator NUMERIC, 
+    p_denominator NUMERIC
+)
+RETURNS NUMERIC
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF p_denominator = 0 THEN
+        RAISE WARNING 'Division by zero attempted for numerator %. Defaulting ratio to 0.00.', p_numerator;
+        RETURN 0.00;
+    END IF;
+    RETURN ROUND(p_numerator / p_denominator, 4);
+END;
+$$;
+
+-- Challenge 5: transfer_funds_secure
+CREATE OR REPLACE FUNCTION transfer_funds_secure(
+    p_from_acct INT, 
+    p_to_acct INT, 
+    p_amount NUMERIC
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_from_bal NUMERIC;
+    v_to_bal NUMERIC;
+BEGIN
+    IF p_from_acct = p_to_acct THEN
+        RAISE EXCEPTION 'Origin and destination accounts cannot be identical (ID: %)', p_from_acct
+            USING ERRCODE = 'cardinality_violation',
+                  HINT = 'Specify two different account IDs.';
+    END IF;
+
+    IF p_amount <= 0 THEN
+        RAISE EXCEPTION 'Transfer amount must be greater than zero (received %)', p_amount
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    SELECT balance INTO v_from_bal FROM accounts WHERE account_id = p_from_acct;
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Account % does not exist', acct_id
-            USING HINT = 'Check account ID and try again',
-                  ERRCODE = 'no_data_found';
+        RAISE EXCEPTION 'Source account % does not exist', p_from_acct
+            USING ERRCODE = 'no_data_found';
     END IF;
 
-    IF current_bal < amount THEN
-        RAISE EXCEPTION 'Insufficient funds: have %, need %',
-            current_bal, amount
-            USING HINT = format('Maximum withdrawal: %s', current_bal),
-                  ERRCODE = 'check_violation';
-    END IF;
-
-    RAISE NOTICE 'Withdrawing % from account %', amount, acct_id;
-
-    UPDATE accounts SET bal = bal - amount WHERE id = acct_id;
-    RETURN current_bal - amount;
-END;
-$$ LANGUAGE plpgsql;
-
--- Test:
-SELECT strict_withdraw(1, 100);  -- Success
--- SELECT strict_withdraw(1, -50);  -- ERROR + HINT
--- SELECT strict_withdraw(999, 50); -- ERROR + HINT
--- SELECT strict_withdraw(1, 99999); -- ERROR + HINT
-
--- Reset
-UPDATE accounts SET bal = 1000 WHERE id = 1;
-
--- === TRANSFER FUNCTION (Full Validation) ===
-
-CREATE OR REPLACE FUNCTION transfer(
-    from_id INT, to_id INT, amount NUMERIC
-) RETURNS TEXT AS $$
-DECLARE
-    from_bal  NUMERIC;
-    from_name VARCHAR;
-    to_name   VARCHAR;
-BEGIN
-    -- Validate amount
-    IF amount <= 0 THEN
-        RAISE EXCEPTION 'Amount must be positive';
-    END IF;
-
-    -- Validate different accounts
-    IF from_id = to_id THEN
-        RAISE EXCEPTION 'Cannot transfer to same account';
-    END IF;
-
-    -- Validate source account
-    SELECT name, bal INTO from_name, from_bal
-    FROM accounts WHERE id = from_id;
+    SELECT balance INTO v_to_bal FROM accounts WHERE account_id = p_to_acct;
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Source account % not found', from_id;
+        RAISE EXCEPTION 'Destination account % does not exist', p_to_acct
+            USING ERRCODE = 'no_data_found';
     END IF;
 
-    -- Validate destination account
-    SELECT name INTO to_name FROM accounts WHERE id = to_id;
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Destination account % not found', to_id;
+    IF v_from_bal < p_amount THEN
+        RAISE EXCEPTION 'Insufficient balance: Account % has %, attempted transfer %', p_from_acct, v_from_bal, p_amount
+            USING ERRCODE = 'check_violation',
+                  DETAIL = 'Transfer rejected to prevent account negative balance.';
     END IF;
 
-    -- Validate sufficient funds
-    IF from_bal < amount THEN
-        RAISE EXCEPTION '% has only %, need %',
-            from_name, from_bal, amount;
-    END IF;
+    UPDATE accounts SET balance = balance - p_amount WHERE account_id = p_from_acct;
+    UPDATE accounts SET balance = balance + p_amount WHERE account_id = p_to_acct;
 
-    -- Perform transfer
-    RAISE NOTICE 'Transferring % from % to %', amount, from_name, to_name;
-    UPDATE accounts SET bal = bal - amount WHERE id = from_id;
-    UPDATE accounts SET bal = bal + amount WHERE id = to_id;
-
-    RETURN format('Transferred %s from %s to %s', amount, from_name, to_name);
+    RETURN format('SUCCESS: Transferred %s from %s to %s', p_amount, p_from_acct, p_to_acct);
 END;
-$$ LANGUAGE plpgsql;
-
--- Test:
-SELECT transfer(1, 2, 100);
-SELECT name, bal FROM accounts ORDER BY id;
-
--- Reset
-UPDATE accounts SET bal = 1000 WHERE id = 1;
-UPDATE accounts SET bal = 500 WHERE id = 2;
-
--- === NULL HANDLING ===
-
--- NULL is tricky in PL/pgSQL!
-
-CREATE OR REPLACE FUNCTION null_demo()
-RETURNS VOID AS $$
-DECLARE
-    x INTEGER := NULL;
-    y INTEGER := 5;
-BEGIN
-    -- These are all FALSE (not true, not false — NULL!)
-    IF x = NULL THEN
-        RAISE NOTICE 'x = NULL (WRONG — never reaches here)';
-    END IF;
-
-    IF x != NULL THEN
-        RAISE NOTICE 'x != NULL (WRONG — never reaches here)';
-    END IF;
-
-    -- Correct way:
-    IF x IS NULL THEN
-        RAISE NOTICE 'x IS NULL — correct!';
-    END IF;
-
-    -- NULL arithmetic produces NULL
-    RAISE NOTICE 'y + NULL = %', y + x;         -- NULL
-    RAISE NOTICE 'COALESCE(x, 0) = %', COALESCE(x, 0);  -- 0
-    RAISE NOTICE 'COALESCE(x, 0) + y = %', COALESCE(x, 0) + y;  -- 5
-END;
-$$ LANGUAGE plpgsql;
-
-SELECT null_demo();
-
--- === PRACTICE EXERCISES ===
-
--- Exercise 1: Grading function
--- grade(score INT) → 'A' (90+), 'B' (80+), 'C' (70+), 'D' (60+), 'F'
-
--- Exercise 2: Simple CASE
--- day_type(day VARCHAR) → 'Weekday' or 'Weekend'
-
--- Exercise 3: RAISE debugging
--- Add RAISE NOTICE to transfer() to trace each validation step
-
--- Exercise 4: USING HINT and ERRCODE
--- Create a function that validates an email:
---   must contain @, must contain ., must be > 5 chars
---   Each violation raises with a specific HINT
-
--- Exercise 5: NULL traps
--- What does this return?
--- SELECT CASE WHEN NULL = NULL THEN 'equal' ELSE 'not equal' END;
--- Answer: 'not equal' (NULL = NULL is NULL, not true)
-
--- Exercise 6: CASE without ELSE
--- What happens when no WHEN matches and there's no ELSE?
--- Answer: ERROR: case not found
-
--- === CLEANUP ===
-DROP FUNCTION IF EXISTS raise_demo();
-DROP FUNCTION IF EXISTS raise_placeholders_demo();
-DROP FUNCTION IF EXISTS null_demo();
-DROP FUNCTION IF EXISTS debug_demo(INT);
--- Keep: account_tier, status_label, age_category,
---       strict_withdraw, transfer
-
--- =============================================
--- Next Class: PL/pgSQL Loops & Set-Returning Functions
--- =============================================
+$$;
